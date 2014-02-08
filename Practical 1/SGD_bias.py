@@ -9,7 +9,7 @@ from __future__ import division
 import util
 import numpy as np
 
-pred_filename  = 'pred-user-based.csv'
+pred_filename  = 'pred-sgb-bias.csv'
 train_filename = 'ratings-train.csv'
 test_filename  = 'ratings-test.csv'
 user_filename  = 'users.csv'
@@ -64,10 +64,11 @@ for user, ratings in users.iteritems():
 
 # initialize feature vectors
 feature_dimension = 5
-gamma = 0.001 # learning rate
-lamb = 0.001 #regularization
+gamma = 0.1 # learning rate
+lamb = 0.1 #regularization
+initial = 0.01
 
-initial_value = 0.1 * np.ones((feature_dimension, 1))
+initial_value = initial * np.ones((feature_dimension, 1))
 for user in user_list:
     users[user['user']]['p'] = initial_value
 for item in book_list:
@@ -88,16 +89,49 @@ def descend():
         items[isbn]['q'] = q + gamma * (e * p - lamb * q)
         users[user]['p'] = p + gamma * (e * q - lamb * p)
 
-descend()
-items_old = items.copy()
-users_old = users.copy()
-descend()
 def descend_gain(items_old, users_old, items, users):
     items_gain = 0; users_gain = 0; 
     for key in items_old:
         items_gain += np.linalg.norm(items_old[key]['q'] - items[key]['q'])
+    for key in users_old:
         users_gain += np.linalg.norm(users_old[key]['p'] - users[key]['p'])
     return items_gain, users_gain
-print(descend_gain(items_old, users_old, items, users))        
-        
+
+def print_feature(feature, name):    
+    for pos in range(5):
+        print feature[feature.keys()[pos]][name]
+        print len(feature[feature.keys()[pos]])-1
     
+
+for i in range(30):
+    descend()
+    
+    
+print_feature(users, 'p')     
+print(descend_gain(items_old, users_old, items, users))       
+        
+
+# Make predictions for each test query.
+for entry in test_queries:
+    isbn = entry['isbn']; user = entry['user'];
+    bi = item_baselines[isbn]; bu = user_baselines[user];
+    q = items[isbn]['q']; p = users[user]['p'];       
+    if len(items[isbn]) == 1:
+        value = float(global_mean + bi + bu);
+        if value < 0:
+            entry['rating'] = 0
+        elif value > 5:
+            entry['rating'] = 5
+        else:
+            entry['rating'] = value
+    else:
+        value = float(global_mean + bi + bu + np.dot(q.T, p))
+        if value < 0:
+            entry['rating'] = 0
+        elif value > 5:
+            entry['rating'] = 5
+        else:
+            entry['rating'] = value
+
+# Write the prediction file.
+util.write_predictions(test_queries, pred_filename)
