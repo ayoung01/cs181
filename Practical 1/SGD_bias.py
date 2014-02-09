@@ -20,6 +20,9 @@ test_queries   = util.load_test(test_filename)
 user_list      = util.load_users(user_filename)
 book_list      = util.load_books(book_filename)
 
+validation_data = training_data[0:40000]
+training_data = training_data[40000:]
+
 # Compute the mean rating.
 num_train = len(training_data)
 global_mean = float(sum(map(lambda x: x['rating'], training_data)))/num_train
@@ -62,76 +65,147 @@ for user, ratings in users.iteritems():
         a += (rating - global_mean - item_baselines[isbn])
     user_baselines[user] = a / (lambda3 + len(ratings))
 
-# initialize feature vectors
-feature_dimension = 5
-gamma = 0.1 # learning rate
-lamb = 0.1 #regularization
-initial = 0.01
 
-initial_value = initial * np.ones((feature_dimension, 1))
-for user in user_list:
-    users[user['user']]['p'] = initial_value
-for item in book_list:
-    items[item['isbn']]['q'] = initial_value
-
-# main gradient decsend algorithm - one epoch
 def descend():
-    for entry in training_data:
-        rating = entry['rating']; isbn = entry['isbn']; user = entry['user'];
-        bi = item_baselines[isbn]; bu = user_baselines[user];
-        q = items[isbn]['q']; p = users[user]['p'];
-        
-        # model
-        r_hat = global_mean + bi + bu + np.dot(q.T, p)
-        
-        e = rating - r_hat
+    # train the first feature
+    j = 0; 
+    #descend_gain = 999
+    for iteration in range(num_iter):
+        #print("i")
+        for entry in training_data:
+            rating = entry['rating']; isbn = entry['isbn']; user = entry['user'];
+            bi = item_baselines[isbn]; bu = user_baselines[user];
+            q = float(items[isbn]['q'][j]); p = float(users[user]['p'][j]);
             
-        items[isbn]['q'] = q + gamma * (e * p - lamb * q)
-        users[user]['p'] = p + gamma * (e * q - lamb * p)
+            r_hat = global_mean + bi + bu + q * p
+            e = rating - r_hat
+                       
+            items[isbn]['q'][j] = q + gamma * (e * p - lamb * q)
+            users[user]['p'][j] = p + gamma * (e * q - lamb * p)
+            entry['e_old'] = e            
+        
+    predict(train_predict, 1)
+    train_rmse = validation_rmse(train_predict, training_data)
+    #print(train_rmse)
+    TRAIN_RMSE.append(train_rmse)
 
-def descend_gain(items_old, users_old, items, users):
-    items_gain = 0; users_gain = 0; 
-    for key in items_old:
-        items_gain += np.linalg.norm(items_old[key]['q'] - items[key]['q'])
-    for key in users_old:
-        users_gain += np.linalg.norm(users_old[key]['p'] - users[key]['p'])
-    return items_gain, users_gain
+    predict(validation_predict, 1)
+    rmse = validation_rmse(validation_predict, validation_data)
+    #print(rmse)
+    RMSE.append(rmse)
+
+           
+    for j in np.arange(1,feature_dimension):    
+        for iteration in range(num_iter):
+            #print("i")
+            for entry in training_data:
+                isbn = entry['isbn']; user = entry['user'];
+                q = items[isbn]['q'][j]; p = users[user]['p'][j];
+                
+                e = entry['e_old'] - p * q                 
+                items[isbn]['q'][j] = q + gamma * (e * p - lamb * q)
+                users[user]['p'][j] = p + gamma * (e * q - lamb * p)
+                entry['e_old'] = e
+        
+        predict(train_predict, j+1)
+        train_rmse = validation_rmse(train_predict, training_data)
+        #print(train_rmse)
+        TRAIN_RMSE.append(train_rmse)   
+        
+        predict(validation_predict, j+1)
+        rmse = validation_rmse(validation_predict, validation_data)
+        #print(rmse)
+        RMSE.append(rmse)        
+
+def calc_descend_gain(items_hist, users_hist, items, users, j):
+    items_res = []; users_res = [];
+    for key in items_hist:
+        items_res.append(float(items_hist[key]['q'][j] - items[key]['q'][j]))
+    for key in users_hist:
+        users_res.append(float(users_hist[key]['p'][j] - users[key]['p'][j]))   
+    return np.sum(np.abs(items_res))/len(items_res), np.sum(np.abs(users_res))/len(users_res)
 
 def print_feature(feature, name):    
-    for pos in range(5):
+    for pos in range(50):
         print feature[feature.keys()[pos]][name]
         print len(feature[feature.keys()[pos]])-1
-    
-
-for i in range(30):
-    descend()
-    
-    
-print_feature(users, 'p')     
-print(descend_gain(items_old, users_old, items, users))       
         
+def fprint(iterable):
+    for item in iterable:
+        print '%.16f' % item
 
-# Make predictions for each test query.
-for entry in test_queries:
-    isbn = entry['isbn']; user = entry['user'];
-    bi = item_baselines[isbn]; bu = user_baselines[user];
-    q = items[isbn]['q']; p = users[user]['p'];       
-    if len(items[isbn]) == 1:
-        value = float(global_mean + bi + bu);
-        if value < 0:
-            entry['rating'] = 0
-        elif value > 5:
-            entry['rating'] = 5
+def predict(queries, n):
+    for entry in queries:
+        isbn = entry['isbn']; user = entry['user'];
+        bi = item_baselines[isbn]; bu = user_baselines[user];
+        q = np.array(items[isbn]['q'][:n]); p = np.array(users[user]['p'][:n]);       
+        if len(items[isbn]) == 1:
+            value = float(global_mean + bi + bu);
+            if value < 0:
+                entry['rating'] = 0
+            elif value > 5:
+                entry['rating'] = 5
+            else:
+                entry['rating'] = value
         else:
-            entry['rating'] = value
-    else:
-        value = float(global_mean + bi + bu + np.dot(q.T, p))
-        if value < 0:
-            entry['rating'] = 0
-        elif value > 5:
-            entry['rating'] = 5
-        else:
-            entry['rating'] = value
+            value = float(global_mean + bi + bu + np.dot(q.T, p))
+            if value < 0:
+                entry['rating'] = 0
+            elif value > 5:
+                entry['rating'] = 5
+            else:
+                entry['rating'] = value  
+                
+def validation_rmse(prediction, validation):
+    res = []  
+    for i in range(len(prediction)):
+        res.append(float(prediction[i]['rating'] - validation[i]['rating']))
+    res = np.array(res)
+    return float(np.sqrt(np.dot(res.T,res)/len(res)))
 
+
+# main gradient decsend algorithm - one epoch
+RMSE = []; TRAIN_RMSE = [];
+validation_predict = []
+for entry in validation_data:
+    validation_predict.append(entry.copy())
+    
+train_predict = []
+for entry in training_data:
+    train_predict.append(entry.copy())
+ 
+
+for lamb in [0.05]: 
+#tuned to lamb = 0.05 with RMSE = 0.7802252543829444
+    # initialize feature vectors
+    TRAIN_RMSE.extend([lamb, lamb])
+    RMSE.extend([lamb, lamb])
+    feature_dimension = 4
+    gamma = 0.1 # learning rate
+    #lamb = 0.1 #regularization
+    initial = 0.1
+    num_iter = 5 #epoch
+    
+    initial_value = [initial] * feature_dimension
+    for user in user_list:
+        users[user['user']]['p'] = list(initial_value)
+    for item in book_list:
+        items[item['isbn']]['q'] = list(initial_value)
+
+    descend()   
+    
+    print(TRAIN_RMSE)
+    print(RMSE)        
+
+
+#plt.plot(range(num_iter),RMSE)
+
+#print_feature(users, 'p') 
+
+#base_line_RMSE = 0.7813774640908429
+      
+"""
+predict(test_queries)
 # Write the prediction file.
 util.write_predictions(test_queries, pred_filename)
+"""
