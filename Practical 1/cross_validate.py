@@ -12,25 +12,30 @@ from matplotlib import pyplot as plt
 
 user_list      = util.user_list
 book_list      = util.book_list
-test_filename  = 'data/ratings-test.csv'
-test           = util.load_test(test_filename)
-
 train_filename = 'data/ratings-train.csv'
 train_valid    = util.load_train(train_filename)
 
-#import data_preprocessing as dp
-#train_valid = dp.initialize()
+# split data into dense and sparse subsets
+import data_processing as dp
+dphelper = dp.data_processing(train_valid)
+dense_subset, sparse_subset = dphelper.split()
+
+# work on the dense subset
+#train_valid = dense_subset
+
+# work on the sparse subset
+train_valid = sparse_subset
 
 ######### Tuning Parameters #########
 
-PARAM = [0]
-#PARAM = np.arange(0.01, 10, 0.05) 
+PARAM = [10]
+#PARAM = np.arange(1, 50, 5) 
 
 num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
 
-import sgd_bias as sgd
+import baseline as bs
 def run_model(train, valid, mode, param):
-    return sgd.sgd_bias(train, valid, mode, param)
+    return bs.baseline(train, valid, mode, param)
 
 #####################################
 n = int(num_folds * (len(train_valid) // 5)) # e.g. length of num_folds * 40000

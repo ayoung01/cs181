@@ -12,7 +12,7 @@ import numpy as np
 user_list      = util.user_list
 book_list      = util.book_list
 
-def baseline(train, test):
+def baseline(train, test, mode='validation', param=0):
     
     # Compute the mean rating.
     train_mean = float(sum(map(lambda x: x['rating'], train)))/len(train)
@@ -36,8 +36,9 @@ def baseline(train, test):
     #lambda2_candidates = np.arange(50)
     #15, 3.5, 0.7749015226558873
     #14.2, 2.8 0.7747012569584306
-    lambda2 = 14.2 #item
-    lambda3 = 2.8 #user
+    #16, 2.9 calibrated to sparse subset 0.7873733707932150
+    lambda2 = 16 #item
+    lambda3 = 2.9 #user
     # {isbn1: -.03, isbn2: .13, ...}    
     
     item_baselines = {}
@@ -59,22 +60,29 @@ def baseline(train, test):
             a += (rating - train_mean - item_baselines[isbn])
         user_baselines[user] = a / (lambda3 + len(ratings))     
         
-    def predict(queries):
-        ratings = np.zeros(len(queries))
-        for i, entry in enumerate(queries):
+    def predict(data, mode):
+        y_hat = np.zeros((len(data), 1))
+        if mode == 'rss': y = np.zeros((len(data), 1))           
+        for i, entry in enumerate(data):
             isbn = entry['isbn']; user = entry['user'];
-            bi = item_baselines[isbn]; bu = user_baselines[user];     
-            value = float(train_mean + bi + bu);
+            bi = item_baselines[isbn]; bu = user_baselines[user];
+            value = float(train_mean + bi + bu);  
+            if mode == 'rss': y[i] = entry['rating']
             if value < 0:
-                ratings[i] = 0
+                y_hat[i] = 0
             elif value > 5:
-                ratings[i] = 5
+                y_hat[i] = 5
             else:
-                ratings[i] = value
-        return ratings
-     
-    return predict(test)
+                y_hat[i] = value  
+        if mode == 'rss':                     
+            return float(np.linalg.norm(y-y_hat)**2)
+        else:
+            return y_hat
     
+    if mode == 'prediction':
+        return predict(test, 'y_hat'), predict(train, 'rss')
+    if mode == 'validation':
+        return predict(train, 'rss'), predict(test, 'rss')
                     
 """                    
     def validation_rmse(prediction, validation):
