@@ -134,8 +134,32 @@ def write_predictions(preds, filename):
         for pred in preds:
             writer.writerow([pred['id'], pred['rating']])
 
+train_filename = 'data/ratings-train.csv'
+test_filename  = 'data/ratings-test.csv'
 user_filename  = 'data/users.csv'
 book_filename  = 'data/books.csv'
 
+train_valid    = load_train(train_filename)
+test           = load_test(test_filename)
 user_list      = load_users(user_filename)
 book_list      = load_books(book_filename)
+
+users = {}
+for user in user_list:
+    users[user['user']] = {}   
+    
+# {isbn1: {user1: 4, user2: 5, ...}, isbn2: {...}, ...}    
+books = {}
+for item in book_list:
+    books[item['isbn']] = {}
+    
+for item in train_valid:
+    users[item['user']][item['isbn']] = 0
+    books[item['isbn']][item['user']] = 0
+    
+for item in test:
+    users[item['user']][item['isbn']] = 0
+    books[item['isbn']][item['user']] = 0   
+
+global_mean = float(sum(map(lambda x: x['rating'], train_valid)))/len(train_valid)
+

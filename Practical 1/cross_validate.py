@@ -15,27 +15,26 @@ book_list      = util.book_list
 train_filename = 'data/ratings-train.csv'
 train_valid    = util.load_train(train_filename)
 
-# split data into dense and sparse subsets
-import data_processing as dp
-dphelper = dp.data_processing(train_valid)
-dense_subset, sparse_subset = dphelper.split()
-
-# work on the dense subset
-#train_valid = dense_subset
-
-# work on the sparse subset
-train_valid = sparse_subset
-
 ######### Tuning Parameters #########
 
-PARAM = [10]
+PARAM = [0]
 #PARAM = np.arange(1, 50, 5) 
 
 num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
 
+#import data_processing as dp
+#dphelper = dp.data_processing()
+#dense, sparse = dphelper.split(train_valid)
+#train_valid = dense
 import baseline as bs
 def run_model(train, valid, mode, param):
     return bs.baseline(train, valid, mode, param)
+#import sgd_bias as sgd
+#def run_model(train, valid, mode, param):
+#    return sgd.sgd_bias(train, valid, mode, param)
+#import hybrid as hb
+#def run_model(train, valid, mode, param):
+#    return hb.validation(train, valid, mode, param)
 
 #####################################
 n = int(num_folds * (len(train_valid) // 5)) # e.g. length of num_folds * 40000
