@@ -2,6 +2,15 @@
 """
 Created on Sat Feb  8 16:03:06 2014
 
+Type: model
+
+baseline model
+
+rating = u + bi + bu
+
+shrinkage towards 0 is applied through lambda2 and lambda3
+
+
 @author: vincentli2010
 """
 

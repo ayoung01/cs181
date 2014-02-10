@@ -2,7 +2,11 @@
 """
 Created on Sun Feb  9 00:02:32 2014
 
-y  = u + bi + bu with l1 penalty on bi and bu
+Type: model
+
+baseline model with l1 penalty on the user and book deviations
+
+rating  = u + bi + bu + \bi\ + \bu\
 
 @author: vincentli2010
 """

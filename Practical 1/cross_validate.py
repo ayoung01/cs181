@@ -2,7 +2,9 @@
 """
 Created on Sun Feb  9 16:20:34 2014
 
-cross_validation
+Type: Driver
+
+cross_validation to tune parameters
 
 @author: vincentli2010
 """

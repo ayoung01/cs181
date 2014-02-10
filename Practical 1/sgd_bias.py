@@ -2,6 +2,14 @@
 """
 Created on Sat Feb  8 16:03:06 2014
 
+Type: model
+
+Matrix Factorization approach, solved with Stochastic Gradient Descent
+
+Model: 
+
+rating = global_avg + user_dev + book_dev + user_feature.T * book_feature
+
 @author: vincentli2010
 """
 

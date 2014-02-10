@@ -2,6 +2,8 @@
 """
 Created on Sun Feb  9 16:20:34 2014
 
+Type: driver
+
 Linearly combine predictions from the following models:
 baseline.py, baseline_l1.py, baseline_l2.py, sgd_bias.py, baseline_freq.py
 

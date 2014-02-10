@@ -2,6 +2,10 @@
 """
 Created on Sat Feb  8 16:03:06 2014
 
+Type: model
+
+baseline model with different treatments of dense and sparse subsets of the data
+
 @author: vincentli2010
 """
 
