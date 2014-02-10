@@ -9,7 +9,7 @@ cross_validation
 import numpy as np
 
 import util
-import baseline as bs
+import baseline_freq as bsfreq
 from matplotlib import pyplot as plt
 
 train_filename = 'data/ratings-train.csv'
@@ -22,18 +22,24 @@ test           = util.load_test(test_filename)
 user_list      = util.load_users(user_filename)
 book_list      = util.load_books(book_filename)
 
-num_folds = 1 # always 5-fold cross-validate, this decides how many folds to run
+
+######### Tuning Parameters #########
+
+#PARAM = [100]
+PARAM = np.arange(1, 30, 1) 
+
+#####################################
+
+num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
 def run_model(train, valid, mode, param):
-    return bs.baseline(train, valid, mode, param)
-PARAM = []  
+    return bsfreq.baseline_freq(train, valid, mode, param)
 
 n = int(num_folds * (len(train_valid) // 5)) # e.g. length of num_folds * 40000
 r = len(PARAM)
 SCORE = np.zeros((r, 2)) #1st column train, 2nd column valid
-
 # cross validation
 for k in range(num_folds):
-    print 'Pass: %d' % k
+    print 'Fold: %d' % k
     span = n // num_folds
     valid = train_valid[k * span : (k + 1) * span]
     if k == 0: 
@@ -46,13 +52,37 @@ for k in range(num_folds):
     
     for i, param in enumerate(PARAM):
         # model_result 
-        train_rmse, valid_rmse = run_model(train, valid, mode = 'cv', param)
-        SCORE[i, 0] = train_rmse; SCORE[i, 1] = valid_rmse
+        train_rss, valid_rss = run_model(train, valid, 'cv', param)
+        SCORE[i, 0] += train_rss; SCORE[i, 1] += valid_rss
 
-for i in range(r):
-    print 'Param: %f\tTrain: %.16\tValidation: %.16' % (PARAM[i], SCORE[i, 0], SCORE[i, 1])
-if r > 1:
-    plt.plot(PARAM, SCORE)
+def calc_rmse(rss, mode):
+    if mode == 'train':
+        num_data_points = int(num_folds * 4 * (len(train_valid) // 5))
+    elif mode == 'valid':
+        num_data_points = n
+    else:
+        num_data_points = 0
+    return float(np.sqrt(rss/num_data_points))
+
+def display():
+    RMSE = np.zeros((r, 2))
+    for i in range(r):
+        RMSE[i, 0] = calc_rmse(SCORE[i, 0], 'train')
+        RMSE[i, 1] = calc_rmse(SCORE[i, 1], 'valid')
+        print 'Param: %f Train: %.16f Valid: %.16f' % (
+            PARAM[i], RMSE[i, 0], RMSE[i, 1])
+    
+    idx_hat = np.argmin(RMSE[:,1])
+    print '******\nOptimal:\nParam: %f Train: %.16f Valid: %.16f\n******' % (
+            PARAM[idx_hat], RMSE[idx_hat, 0], RMSE[idx_hat, 1])
+    
+    if r > 1:
+        trainplot, = plt.plot(PARAM, RMSE[:, 0])
+        validplot, = plt.plot(PARAM, RMSE[:, 1])
+        plt.title("RMSE Plot")    
+        plt.legend([trainplot, validplot], ["Train", "Valid"])
+
+display()
 
 """
 x = np.zeros((n, r, 2)) # 2 layers, 1 for train predictions and 1 for valid predictions

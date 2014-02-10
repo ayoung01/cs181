@@ -12,7 +12,7 @@ import numpy as np
 user_list      = util.user_list
 book_list      = util.book_list
 
-def baseline(train, test):
+def baseline_freq(train, test, mode, param):
     
     # Compute the mean rating.
     train_mean = float(sum(map(lambda x: x['rating'], train)))/len(train)
@@ -36,28 +36,35 @@ def baseline(train, test):
     #lambda2_candidates = np.arange(50)
     #15, 3.5, 0.7749015226558873
     #14.2, 2.8 0.7747012569584306
-    lambda2 = 14.2 #item
-    lambda3 = 2.8 #user
+    #lambda2 = 14.2 #item
+    #lambda3 = 2.8 #user
     # {isbn1: -.03, isbn2: .13, ...}    
+
+    param1 = 19.6
+    param2 = param
+    def lambda2(freq):
+        return max([param1 - freq, 1])
+    def lambda3(freq):
+        return max([param2 - freq, 1])
     
     item_baselines = {}
      # Adjustable parameter
     for isbn, ratings in items.iteritems():
-        a = 0.0
+        a = 0.0; freq = len(ratings)
         # Sum all differences between rating of item and global mean
         for rating in ratings.values():
             a += (rating - train_mean)
-        item_baselines[isbn] = a / (lambda2 + len(ratings))
+        item_baselines[isbn] = a / (lambda2(freq) + freq)
     
     # {user1: .215, user2: -.16, ...}
     user_baselines = {}
     for user, ratings in users.iteritems():
-        a = 0.0
+        a = 0.0; freq = len(ratings)
         # Sum r_ui - global_mean - baseline_i
         # ratings = {isbn1: 4, isbn2: 5, ...}
         for isbn, rating in ratings.iteritems():
             a += (rating - train_mean - item_baselines[isbn])
-        user_baselines[user] = a / (lambda3 + len(ratings))     
+        user_baselines[user] = a / (lambda3(freq) + freq)     
         
     def predict(queries):
         ratings = np.zeros(len(queries))
@@ -71,10 +78,30 @@ def baseline(train, test):
                 ratings[i] = 5
             else:
                 ratings[i] = value
+                
         return ratings
-     
-    return predict(test)
-    
+
+    def calc_rss(data):
+        y_hat = np.zeros((len(data), 1))
+        y = np.zeros((len(data), 1))
+        for i, entry in enumerate(data):
+            isbn = entry['isbn']; user = entry['user'];
+            bi = item_baselines[isbn]; bu = user_baselines[user];    
+            y[i] = entry['rating']
+            value = float(train_mean + bi + bu);
+            if value < 0:
+                y_hat[i] = 0
+            elif value > 5:
+                y_hat[i] = 5
+            else:
+                y_hat[i] = value
+                
+        return float(np.linalg.norm(y-y_hat)**2)
+        
+    if mode == 'ensemble':
+        return predict(test)
+    if mode == 'cv':
+        return calc_rss(train), calc_rss(test)
                     
 """                    
     def validation_rmse(prediction, validation):
