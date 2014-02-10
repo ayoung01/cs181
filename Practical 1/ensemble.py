@@ -83,7 +83,8 @@ print ('Building final model')
 predictions = np.zeros((len(test), num_model))
 train = train_valid
 
-model_results = run_models(train, valid)    
+model_results = run_models(train, test)  
+  
 for i, result in enumerate(model_results):
     build_matrix(predictions, result, fold = 0, model = i)
     

@@ -7,33 +7,29 @@ cross_validation
 @author: vincentli2010
 """
 import numpy as np
-
 import util
-import baseline_freq as bsfreq
 from matplotlib import pyplot as plt
 
 train_filename = 'data/ratings-train.csv'
 test_filename  = 'data/ratings-test.csv'
-user_filename  = 'data/users.csv'
-book_filename  = 'data/books.csv'
-
 train_valid    = util.load_train(train_filename)
 test           = util.load_test(test_filename)
-user_list      = util.load_users(user_filename)
-book_list      = util.load_books(book_filename)
+user_list      = util.user_list
+book_list      = util.book_list
 
 
 ######### Tuning Parameters #########
 
-#PARAM = [100]
-PARAM = np.arange(1, 30, 1) 
-
-#####################################
+#PARAM = [5]
+PARAM = np.arange(0.01, 10, 0.05) 
 
 num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
-def run_model(train, valid, mode, param):
-    return bsfreq.baseline_freq(train, valid, mode, param)
 
+import sgd_bias as sgd
+def run_model(train, valid, mode, param):
+    return sgd.sgd_bias(train, valid, mode, param)
+
+#####################################
 n = int(num_folds * (len(train_valid) // 5)) # e.g. length of num_folds * 40000
 r = len(PARAM)
 SCORE = np.zeros((r, 2)) #1st column train, 2nd column valid

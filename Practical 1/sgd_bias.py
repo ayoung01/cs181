@@ -13,7 +13,7 @@ user_list      = util.user_list
 book_list      = util.book_list
 
 
-def sgd_bias(train, test):
+def sgd_bias(train, test, mode, param):
     
     # Compute the mean rating.
     train_mean = float(sum(map(lambda x: x['rating'], train)))/len(train)
@@ -153,8 +153,36 @@ def sgd_bias(train, test):
         for i in range(len(prediction)):
             res.append(float(prediction[i]['rating'] - validation[i]['rating']))
         res = np.array(res)
-        return float(np.sqrt(np.dot(res.T,res)/len(res)))
+        return float(np.sqrt(np.dot(res.T,res)/len(res)))  
     
+    def calc_rss(data, n):
+        y_hat = np.zeros((len(data), 1))
+        y = np.zeros((len(data), 1))           
+        for i, entry in enumerate(data):
+            isbn = entry['isbn']; user = entry['user'];
+            bi = item_baselines[isbn]; bu = user_baselines[user];
+            q = np.array(items[isbn]['q'][:n]); p = np.array(users[user]['p'][:n]);   
+            y[i] = entry['rating']
+            if len(items[isbn]) == 1:
+                value = float(train_mean + bi + bu);
+                if value < 0:
+                    y_hat[i] = 0
+                elif value > 5:
+                    y_hat[i] = 5
+                else:
+                    y_hat[i] = value
+            else:
+                value = float(train_mean + bi + bu + np.dot(q.T, p))
+                if value < 0:
+                    y_hat[i] = 0
+                elif value > 5:
+                    y_hat[i] = 5
+                else:
+                    y_hat[i] = value                           
+        return float(np.linalg.norm(y-y_hat)**2)
+        
+ 
+ 
     
     # main gradient decsend algorithm - one epoch
     #RMSE = []; TRAIN_RMSE = [];
@@ -167,7 +195,7 @@ def sgd_bias(train, test):
     #    train_predict.append(entry.copy())
      
     #tuned to lamb = 0.05 with RMSE = 0.7802252543829444
-    lamb = 0.05 #regularization
+    lamb = param #regularization
     feature_dimension = 4
     gamma = 0.1 # learning rate
     initial = 0.1
@@ -180,8 +208,10 @@ def sgd_bias(train, test):
         items[item['isbn']]['q'] = list(initial_value)
 
     descend()   
-    return predict(test, feature_dimension)
-
+    if mode == 'ensemble':
+        return predict(test, feature_dimension)
+    if mode == 'cv':
+        return calc_rss(train, feature_dimension), calc_rss(test,feature_dimension)
     
     #plt.plot(range(num_iter),RMSE)
     
