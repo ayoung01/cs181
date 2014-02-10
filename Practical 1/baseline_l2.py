@@ -75,20 +75,20 @@ def baseline_l2(train, test):
             y_predict[i] = 0
         if yi > 5:
             y_predict[i] = 5
-            
-    for entry in test:
+    
+    ratings = np.zeros(len(test))
+    for i, entry in enumerate(test):
         isbn = entry['isbn']; user = entry['user'];
         bi = b[id_i[isbn]]; bu = b[id_i[user]];
         value = float(train_mean + bi + bu);
         if value < 0:
-            entry['rating'] = 0
+            ratings[i] = 0
         elif value > 5:
-            entry['rating'] = 5
+            ratings[i] = 5
         else:
-            entry['rating'] = value
+            ratings[i] = value
     
-    return test    
-          
+    return ratings        
     """      
     # cross-validation
     LAMB = np.arange(1, 10, 0.1)

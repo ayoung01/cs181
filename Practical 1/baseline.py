@@ -7,6 +7,7 @@ Created on Sat Feb  8 16:03:06 2014
 
 from __future__ import division
 import util
+import numpy as np
 
 user_filename  = 'data/users.csv'
 book_filename  = 'data/books.csv'
@@ -62,19 +63,20 @@ def baseline(train, test):
         user_baselines[user] = a / (lambda3 + len(ratings))     
         
     def predict(queries):
-        for entry in queries:
+        ratings = np.zeros(len(queries))
+        for i, entry in enumerate(queries):
             isbn = entry['isbn']; user = entry['user'];
             bi = item_baselines[isbn]; bu = user_baselines[user];     
             value = float(train_mean + bi + bu);
             if value < 0:
-                entry['rating'] = 0
+                ratings[i] = 0
             elif value > 5:
-                entry['rating'] = 5
+                ratings[i] = 5
             else:
-                entry['rating'] = value
-    
-    predict(test)
-    return test
+                ratings[i] = value
+        return ratings
+     
+    return predict(test)
     
                     
 """                    

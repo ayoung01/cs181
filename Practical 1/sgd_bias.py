@@ -126,26 +126,28 @@ def sgd_bias(train, test):
             print '%.16f' % item
     
     def predict(queries, n):
-        for entry in queries:
+        ratings = np.zeros(len(queries))
+        for i, entry in enumerate(queries):
             isbn = entry['isbn']; user = entry['user'];
             bi = item_baselines[isbn]; bu = user_baselines[user];
             q = np.array(items[isbn]['q'][:n]); p = np.array(users[user]['p'][:n]);       
             if len(items[isbn]) == 1:
                 value = float(train_mean + bi + bu);
                 if value < 0:
-                    entry['rating'] = 0
+                    ratings[i] = 0
                 elif value > 5:
-                    entry['rating'] = 5
+                    ratings[i] = 5
                 else:
-                    entry['rating'] = value
+                    ratings[i] = value
             else:
                 value = float(train_mean + bi + bu + np.dot(q.T, p))
                 if value < 0:
-                    entry['rating'] = 0
+                    ratings[i] = 0
                 elif value > 5:
-                    entry['rating'] = 5
+                    ratings[i] = 5
                 else:
-                    entry['rating'] = value  
+                    ratings[i] = value  
+        return ratings
                     
     def validation_rmse(prediction, validation):
         res = []  
@@ -179,8 +181,7 @@ def sgd_bias(train, test):
         items[item['isbn']]['q'] = list(initial_value)
 
     descend()   
-    predict(test, feature_dimension)
-    return test
+    return predict(test, feature_dimension)
 
     
     #plt.plot(range(num_iter),RMSE)

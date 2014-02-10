@@ -36,19 +36,18 @@ for i, entry in enumerate(train_valid):
         y[i] = float(entry['rating'])
         
 def build_matrix(m, v, fold, model):
-    row = fold * 40000
-    for entry in v:
-        m[row, model] = float(entry['rating'])
-        row += 1
+    span = len(v)
+    m[fold*span:(fold+1)*span, model] = np.array(v)
         
 def run_models(train, valid):
-    return (bs.baseline(train, list(valid)), 
-            bsl1.baseline_l1(train, list(valid)), 
-            bsl2.baseline_l2(train, list(valid)), 
-            sgd.sgd_bias(train, list(valid)))
+    return (bs.baseline(train, valid), 
+            bsl1.baseline_l1(train, valid), 
+            bsl2.baseline_l2(train, valid), 
+            sgd.sgd_bias(train, valid))
         
 # build linear ensemble
 for k in range(5):
+    print 'Pass: %d' % k
     valid = train_valid[k * 40000 : (k + 1) * 40000]
     if k == 0: 
         train = train_valid[40000:]
@@ -64,8 +63,11 @@ for k in range(5):
     build_matrix(x, x_bsl1, fold = k, model = 1)
     build_matrix(x, x_bsl2, fold = k, model = 2)
     build_matrix(x, x_sgd, fold = k, model = 3)
-    
-b = np.linalg.solve(x, y)   
+
+#import pickle
+#pickle.dump(x, open('data/x.p', 'wb')) 
+b = np.linalg.solve(np.dot(x.T,x), np.dot(x.T,y))   
+#b = np.linalg.lstsq(x, y)   
 
 # make and combine predictions with ensemble
 predictions = np.zeros((len(test), num_model))
@@ -76,6 +78,7 @@ build_matrix(predictions, pred_bs, fold = 0, model = 0)
 build_matrix(predictions, pred_bsl1, fold = 0, model = 1)
 build_matrix(predictions, pred_bsl2, fold = 0, model = 2)
 build_matrix(predictions, pred_sgd, fold = 0, model = 3)
+#pickle.dump(predictions, open('data/predictions.p', 'wb')) 
 
 final_pred = np.dot(predictions, b)
 
@@ -88,5 +91,5 @@ for i, yi in enumerate(final_pred):
 for i, entry in enumerate(test):
     entry['rating'] = float(final_pred[i])
 
-pred_filename  = 'predictions/ensemble_v0.csv'
+pred_filename  = 'predictions/ensemble_v1_excludel1.csv'
 util.write_predictions(test, pred_filename) 
