@@ -37,7 +37,7 @@ def run_models(train, valid):
             bsl1.baseline_l1(train, valid), 
             bsl2.baseline_l2(train, valid), 
             sgd.sgd_bias(train, valid),
-            bsfreq.baseline_freq(train,valid,'ensemble'))
+            bsfreq.baseline_freq(train,valid,'predict'))
  
 pred_filename  = 'predictions/ensemble_v2_baselien_freq.csv'
 #######################

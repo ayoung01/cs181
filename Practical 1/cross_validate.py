@@ -10,18 +10,21 @@ import numpy as np
 import util
 from matplotlib import pyplot as plt
 
-train_filename = 'data/ratings-train.csv'
-test_filename  = 'data/ratings-test.csv'
-train_valid    = util.load_train(train_filename)
-test           = util.load_test(test_filename)
 user_list      = util.user_list
 book_list      = util.book_list
+test_filename  = 'data/ratings-test.csv'
+test           = util.load_test(test_filename)
 
+train_filename = 'data/ratings-train.csv'
+train_valid    = util.load_train(train_filename)
+
+#import data_preprocessing as dp
+#train_valid = dp.initialize()
 
 ######### Tuning Parameters #########
 
-#PARAM = [5]
-PARAM = np.arange(0.01, 10, 0.05) 
+PARAM = [0]
+#PARAM = np.arange(0.01, 10, 0.05) 
 
 num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
 
@@ -48,7 +51,7 @@ for k in range(num_folds):
     
     for i, param in enumerate(PARAM):
         # model_result 
-        train_rss, valid_rss = run_model(train, valid, 'cv', param)
+        train_rss, valid_rss = run_model(train, valid, 'validation', param)
         SCORE[i, 0] += train_rss; SCORE[i, 1] += valid_rss
 
 def calc_rmse(rss, mode):
@@ -69,7 +72,7 @@ def display():
             PARAM[i], RMSE[i, 0], RMSE[i, 1])
     
     idx_hat = np.argmin(RMSE[:,1])
-    print '******\nOptimal:\nParam: %f Train: %.16f Valid: %.16f\n******' % (
+    print '******\nParam: %f Train: %.16f Valid: %.16f\n******' % (
             PARAM[idx_hat], RMSE[idx_hat, 0], RMSE[idx_hat, 1])
     
     if r > 1:

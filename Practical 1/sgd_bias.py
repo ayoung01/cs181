@@ -13,7 +13,7 @@ user_list      = util.user_list
 book_list      = util.book_list
 
 
-def sgd_bias(train, test, mode, param):
+def sgd_bias(train, test, mode='validation', param=0): 
     
     # Compute the mean rating.
     train_mean = float(sum(map(lambda x: x['rating'], train)))/len(train)
@@ -123,31 +123,7 @@ def sgd_bias(train, test, mode, param):
     def fprint(iterable):
         for item in iterable:
             print '%.16f' % item
-    
-    def predict(queries, n):
-        ratings = np.zeros(len(queries))
-        for i, entry in enumerate(queries):
-            isbn = entry['isbn']; user = entry['user'];
-            bi = item_baselines[isbn]; bu = user_baselines[user];
-            q = np.array(items[isbn]['q'][:n]); p = np.array(users[user]['p'][:n]);       
-            if len(items[isbn]) == 1:
-                value = float(train_mean + bi + bu);
-                if value < 0:
-                    ratings[i] = 0
-                elif value > 5:
-                    ratings[i] = 5
-                else:
-                    ratings[i] = value
-            else:
-                value = float(train_mean + bi + bu + np.dot(q.T, p))
-                if value < 0:
-                    ratings[i] = 0
-                elif value > 5:
-                    ratings[i] = 5
-                else:
-                    ratings[i] = value  
-        return ratings
-                    
+                      
     def validation_rmse(prediction, validation):
         res = []  
         for i in range(len(prediction)):
@@ -155,14 +131,14 @@ def sgd_bias(train, test, mode, param):
         res = np.array(res)
         return float(np.sqrt(np.dot(res.T,res)/len(res)))  
     
-    def calc_rss(data, n):
+    def predict(data, n, mode):
         y_hat = np.zeros((len(data), 1))
-        y = np.zeros((len(data), 1))           
+        if mode == 'rss': y = np.zeros((len(data), 1))           
         for i, entry in enumerate(data):
             isbn = entry['isbn']; user = entry['user'];
             bi = item_baselines[isbn]; bu = user_baselines[user];
             q = np.array(items[isbn]['q'][:n]); p = np.array(users[user]['p'][:n]);   
-            y[i] = entry['rating']
+            if mode == 'rss': y[i] = entry['rating']
             if len(items[isbn]) == 1:
                 value = float(train_mean + bi + bu);
                 if value < 0:
@@ -178,9 +154,11 @@ def sgd_bias(train, test, mode, param):
                 elif value > 5:
                     y_hat[i] = 5
                 else:
-                    y_hat[i] = value                           
-        return float(np.linalg.norm(y-y_hat)**2)
-        
+                    y_hat[i] = value    
+        if mode == 'rss':                     
+            return float(np.linalg.norm(y-y_hat)**2)
+        else:
+            return y_hat
  
  
     
@@ -195,11 +173,12 @@ def sgd_bias(train, test, mode, param):
     #    train_predict.append(entry.copy())
      
     #tuned to lamb = 0.05 with RMSE = 0.7802252543829444
-    lamb = param #regularization
-    feature_dimension = 4
+    #lamb = 4.01 with RMSE = 0.7747012079725805
+    lamb = 0.05 #regularization
+    feature_dimension = 2
     gamma = 0.1 # learning rate
     initial = 0.1
-    num_iter = 5 #epoch
+    num_iter = 1 #epoch
     
     initial_value = [initial] * feature_dimension
     for user in user_list:
@@ -208,10 +187,10 @@ def sgd_bias(train, test, mode, param):
         items[item['isbn']]['q'] = list(initial_value)
 
     descend()   
-    if mode == 'ensemble':
-        return predict(test, feature_dimension)
-    if mode == 'cv':
-        return calc_rss(train, feature_dimension), calc_rss(test,feature_dimension)
+    if mode == 'prediction':
+        return predict(test, feature_dimension, 'y_hat'), predict(train, feature_dimension, 'rss')
+    if mode == 'validation':
+        return predict(train, feature_dimension, 'rss'), predict(test,feature_dimension, 'rss')
     
     #plt.plot(range(num_iter),RMSE)
     
