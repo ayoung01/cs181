@@ -11,10 +11,9 @@ import numpy as np
 import scipy.sparse as ss
 from sklearn import linear_model
 
-user_filename  = 'data/users.csv'
-book_filename  = 'data/books.csv'
-user_list      = util.load_users(user_filename)
-book_list      = util.load_books(book_filename)
+user_list      = util.user_list
+book_list      = util.book_list
+
 
 def baseline_l1(train, test): 
     i_id = []; id_i = {}

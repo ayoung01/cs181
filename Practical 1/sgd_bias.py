@@ -9,10 +9,9 @@ from __future__ import division
 import util
 import numpy as np
 
-user_filename  = 'data/users.csv'
-book_filename  = 'data/books.csv'
-user_list      = util.load_users(user_filename)
-book_list      = util.load_books(book_filename)
+user_list      = util.user_list
+book_list      = util.book_list
+
 
 def sgd_bias(train, test):
     
