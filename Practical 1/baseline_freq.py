@@ -12,7 +12,7 @@ import numpy as np
 user_list      = util.user_list
 book_list      = util.book_list
 
-def baseline_freq(train, test, mode, param):
+def baseline_freq(train, test, mode='cv', param=0):
     
     # Compute the mean rating.
     train_mean = float(sum(map(lambda x: x['rating'], train)))/len(train)
@@ -33,15 +33,16 @@ def baseline_freq(train, test, mode, param):
         users[item['user']][item['isbn']] = item['rating']
         items[item['isbn']][item['user']] = item['rating']
     
-    #lambda2_candidates = np.arange(50)
-    #15, 3.5, 0.7749015226558873
-    #14.2, 2.8 0.7747012569584306
+    #lambda = 15, 3.5, 0.7749015226558873
+    #lambda = 14.2, 2.8 0.7747012569584306
+    
     #lambda2 = 14.2 #item
     #lambda3 = 2.8 #user
     # {isbn1: -.03, isbn2: .13, ...}    
 
+    # param = 19.6, 7, 0.7746324489813633
     param1 = 19.6
-    param2 = param
+    param2 = 7 
     def lambda2(freq):
         return max([param1 - freq, 1])
     def lambda3(freq):
