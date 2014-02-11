@@ -6,6 +6,15 @@ import operator
 import math
 import matplotlib.pyplot as plt
 
+def estimate_baseline(user, isbn):
+    x = train_mean + user_baselines[user]
+    if isbn in amazon_baselines:
+        print 'yay'
+        return x + amazon_baselines[isbn]
+    else:
+        print 'nay'
+        return x + item_baselines[isbn]
+
 user_list      = util.user_list
 book_list      = util.book_list
 
@@ -67,8 +76,8 @@ lambda2 = 16 #item
 lambda3 = 2.9 #user
 # {isbn1: -.03, isbn2: .13, ...}    
 
-
-ratings_by_year = {} # {year1: [1,2,3], year2: [...]}
+# {year1: [1,2,3], year2: [...]}
+ratings_by_year = {}
 years = []; year_averages = [];
 for book in book_list:
     year = book['year']
@@ -87,27 +96,22 @@ for year, ratings in ratings_by_year.iteritems():
     else:
         year_averages.append(sum(ratings)/len(ratings))
 
-year_averages = {} # {year1: 4.2, year2: 4.3, ...}
-for year, ratings in ratings_by_year.iteritems():
-    year_averages[year] = sum(ratings)/len(ratings)
-
 year_baselines = {}
 # for each book in training set
-for year, ratings in ratings_by_year.iteritems():
+for isbn, ratings in items.iteritems():
     a = 0.0
-    for rating in ratings.values()
-        a += (rating - train_mean) 
-    year_baselines[year] = a / (lambda_t + len(ratings))   
+    # Get year of book
+    year = item_years[isbn]
 
+    # Difference between rating of item and average of item's year
 
 
 item_baselines = {}
 for isbn, ratings in items.iteritems():
     a = 0.0
     # Sum all differences between rating of item and global mean
-    year_effect = year_baselines[item_years[isbn]]
     for rating in ratings.values():
-        a += (rating - train_mean - year_effect)
+        a += (rating - train_mean)
     item_baselines[isbn] = a / (lambda2 + len(ratings))
 
 # {user1: .215, user2: -.16, ...}
@@ -116,12 +120,44 @@ for user, ratings in users.iteritems():
     a = 0.0
     # Sum r_ui - train_mean - baseline_i
     # ratings = {isbn1: 4, isbn2: 5, ...}
-    year_effect = year_baselines[item_years[isbn]]
     for isbn, rating in ratings.iteritems():
-        a += (rating - train_mean - year_effect - item_baselines[isbn])
+        a += (rating - train_mean - item_baselines[isbn])
     user_baselines[user] = a / (lambda3 + len(ratings))
 
+# {age: [4, 4, 3, ...] ..., age2: [...]}
+ratings_by_age = {}
+ages = []; averages = [];
+for user in user_list:
+    user_age = user['age']
+    user_id = user['user']
+    if user_age == 0 or user_age > 100:
+        continue
+    if not user_age in ratings_by_age:
+        ratings_by_age[user_age] = []
+    for value in users[user_id].values():
+        ratings_by_age[user_age].append(value)
 
+for age, ratings in ratings_by_age.iteritems():
+    ages.append(age)
+    averages.append(sum(ratings)/len(ratings))
+
+amazon_num = []
+train_num = []
+
+for query in test_queries:
+    user_i = query['user']
+    isbn_i = query['isbn']
+    # If book is in amazon dataset and book has two or fewer ratings:
+    if isbn in amazon_baselines: #and len(items[isbn]) < 3:
+        # Get number of ratings of book:
+        num_train_ratings = len(items[isbn])
+        # Get number of ratings book has on amazon:
+        num_amazon_ratings = len(amazon_baselines[isbn])
+        amazon_num.append(num_amazon_ratings)
+        train_num.append(num_train_ratings)
+# Plot differences
+plt.plot(amazon_num, train_num)
+plt.savefig('amazonvstrain.png')
 
 #     # If the user is not in the training set, return baseline estimate of book
 #     if len(users[user_i].values()) == 0:
