@@ -47,7 +47,6 @@ def compute_similarity(user_i, user_j):
     
 
 def estimate_baseline(user, isbn):
-    x = global_mean + user_baselines[user] + item_baselines[isbn]
     return global_mean + user_baselines[user] + item_baselines[isbn]
 
 # returns a sorted list of tuples with up to the k most similar users
