@@ -26,6 +26,7 @@ def baseline(train, test, mode='validation', param=0):
     # Compute the mean rating.
     train_mean = float(sum(map(lambda x: x['rating'], train)))/len(train)
     #train_mean = util.global_mean
+    #train_mean  = 4.210194973215356    
     
     # Turn the list of users into a dictionary.
     # Store data for each user to keep track of the per-user average.
