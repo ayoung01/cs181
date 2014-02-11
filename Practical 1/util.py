@@ -1,5 +1,27 @@
 import csv
 
+def load_amazon(filename):
+    f = open(filename)
+    amazon_ratings = {}
+
+    while True:
+        isbn = f.readline()[19:].strip()
+        if not isbn:
+            break
+        for x in xrange(0, 5):
+            f.readline()
+        # helpfulness = f.readline()[20:]
+        score = float(f.readline()[14:])
+        for x in xrange(0, 4):
+            f.readline()
+        if not isbn in amazon_ratings:
+            amazon_ratings[isbn] = []
+        # try:
+        #     help_score = eval(helpfulness)
+        # except:
+        #     help_score = 0
+        amazon_ratings[isbn].append(score)
+    return amazon_ratings
 
 def load_books(filename='books.csv'):
     """Load in the book data.

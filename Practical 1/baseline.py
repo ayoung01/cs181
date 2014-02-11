@@ -52,7 +52,6 @@ def baseline(train, test, mode='validation', param=0):
     # {isbn1: -.03, isbn2: .13, ...}    
     
     item_baselines = {}
-     # Adjustable parameter
     for isbn, ratings in items.iteritems():
         a = 0.0
         # Sum all differences between rating of item and global mean
