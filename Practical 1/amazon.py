@@ -134,7 +134,6 @@ for year, ratings in ratings_by_year.iteritems():
     else:
         year_averages.append(sum(ratings)/len(ratings))
 
-
 amazon_num = []
 train_num = []
 
