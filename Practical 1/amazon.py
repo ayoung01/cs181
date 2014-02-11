@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
 from __future__ import division
 import numpy as np
 import util
 import operator
 import math
+import matplotlib.pyplot as plt
 
 def estimate_baseline(user, isbn):
     x = train_mean + user_baselines[user]
@@ -50,14 +50,19 @@ for item in train:
 
 # 929264 books indexed by isbn
 amazon_data = util.load_amazon('/Users/ayoung/Desktop/Books.txt')
+import pickle
+pickle.dump(amazon_data, open('amazon_parsed.p', 'wb'))
+# amazon_data = pickle.load(open('amazon_parsed.p', 'rb'))
+print 'amazon data loaded!'
 
-# Compute amazon global mean:
-sum_ratings = num_ratings = 0
+# # Compute amazon global mean:
+# sum_ratings = num_ratings = 0
+# for (score, helpfulness) in amazon_data.itervalues():
+#     sum_ratings += sum(score)
+#     num_ratings += len(score)
+# amazon_mean = sum_ratings / num_ratings
 
-for scores in amazon_data.itervalues():
-    sum_ratings += sum(scores)
-    num_ratings += len(scores)
-amazon_mean = sum_ratings / num_ratings #4.210194973215356
+amazon_mean = 4.210194973215356
 
 #lambda2_candidates = np.arange(50)
 #15, 3.5, 0.7749015226558873
@@ -92,24 +97,77 @@ for user, ratings in users.iteritems():
         a += (rating - train_mean - item_baselines[isbn])
     user_baselines[user] = a / (lambda3 + len(ratings))
 
+# {age: [4, 4, 3, ...] ..., age2: [...]}
+ratings_by_age = {}
+ages = []; averages = [];
+for user in user_list:
+    user_age = user['age']
+    user_id = user['user']
+    if user_age == 0 or user_age > 100:
+        continue
+    if not user_age in ratings_by_age:
+        ratings_by_age[user_age] = []
+    for value in users[user_id].values():
+        ratings_by_age[user_age].append(value)
+
+for age, ratings in ratings_by_age.iteritems():
+    ages.append(age)
+    averages.append(sum(ratings)/len(ratings))
+
+# {year1: [1,2,3], year2: [...]}
+ratings_by_year = {}
+years = []; year_averages = [];
+for book in book_list:
+    year = book['year']
+    isbn = book['isbn']
+    if year > 2014 or year == 0:
+        continue
+    if not year in ratings_by_year:
+        ratings_by_year[year] = []
+    for value in items[isbn].values():
+        ratings_by_year[year].append(value)
+
+for year, ratings in ratings_by_year.iteritems():
+    years.append(year)
+    if (len(ratings) == 0):
+        year_averages.append(0)
+    else:
+        year_averages.append(sum(ratings)/len(ratings))
+
+
+amazon_num = []
+train_num = []
+
 for query in test_queries:
     user_i = query['user']
     isbn_i = query['isbn']
-    # If the user is not in the training set, return baseline estimate of book
-    if len(users[user_i].values()) == 0:
-        query['rating'] = train_mean + item_baselines[isbn_i]
-        continue
-    # If the book is not in the training set, return baseline estimate of user
-    elif len(items[isbn_i]) == 0:
-        query['rating'] = train_mean + user_baselines[user_i]
-        continue
-    else:
-        baseline_rating = estimate_baseline(user_i, isbn_i)
-        query['rating'] = baseline_rating
-    # adjust if rating is over 5 or below 1
-    if query['rating'] > 5:
-        query['rating'] = 5
-    if query['rating'] < 1:
-        query['rating'] = 1
+    # If book is in amazon dataset and book has two or fewer ratings:
+    if isbn in amazon_baselines: #and len(items[isbn]) < 3:
+        # Get number of ratings of book:
+        num_train_ratings = len(items[isbn])
+        # Get number of ratings book has on amazon:
+        num_amazon_ratings = len(amazon_baselines[isbn])
+        amazon_num.append(num_amazon_ratings)
+        train_num.append(num_train_ratings)
+# Plot differences
+plt.plot(amazon_num, train_num)
+plt.savefig('amazonvstrain.png')
 
-util.write_predictions(test_queries, pred_filename)
+#     # If the user is not in the training set, return baseline estimate of book
+#     if len(users[user_i].values()) == 0:
+#         query['rating'] = train_mean + item_baselines[isbn_i]
+#         continue
+#     # If the book is not in the training set, return baseline estimate of user
+#     elif len(items[isbn_i]) == 0:
+#         query['rating'] = train_mean + user_baselines[user_i]
+#         continue
+#     else:
+#         baseline_rating = estimate_baseline(user_i, isbn_i)
+#         query['rating'] = baseline_rating
+#     # adjust if rating is over 5 or below 1
+#     if query['rating'] > 5:
+#         query['rating'] = 5
+#     if query['rating'] < 1:
+#         query['rating'] = 1
+
+# util.write_predictions(test_queries, pred_filename)
