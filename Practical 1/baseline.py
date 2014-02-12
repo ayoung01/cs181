@@ -68,6 +68,7 @@ def baseline(train, test, mode='validation', param=0):
         # ratings = {isbn1: 4, isbn2: 5, ...}
         for isbn, rating in ratings.iteritems():
             a += (rating - train_mean - item_baselines[isbn])
+            #a += (rating - train_mean)
         user_baselines[user] = a / (lambda3 + len(ratings))     
         
     def predict(data, mode):
@@ -77,6 +78,7 @@ def baseline(train, test, mode='validation', param=0):
             isbn = entry['isbn']; user = entry['user'];
             bi = item_baselines[isbn]; bu = user_baselines[user];
             value = float(train_mean + bi + bu);  
+            #value = float(train_mean + (bi + bu)/2)
             if mode == 'rss': y[i] = entry['rating']
             if value < 0:
                 y_hat[i] = 0

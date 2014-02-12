@@ -19,8 +19,8 @@ train_valid    = util.load_train(train_filename)
 
 ######### Tuning Parameters #########
 
-PARAM = [0]
-#PARAM = np.arange(1, 50, 5) 
+#PARAM = [1.9, 2.9, 3.9]
+PARAM = np.arange(2.5, 3.5, 0.1) 
 
 num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
 
@@ -28,12 +28,19 @@ num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
 #dphelper = dp.data_processing()
 #dense, sparse = dphelper.split(train_valid)
 #train_valid = dense
-import baseline as bs
+
+import baseline_chrono as bschrono
 def run_model(train, valid, mode, param):
-    return bs.baseline(train, valid, mode, param)
+    return bschrono.baseline_chrono(train, valid, mode, param)
+
+#import baseline as bs
+#def run_model(train, valid, mode, param):
+#    return bs.baseline(train, valid, mode, param)
+    
 #import sgd_bias as sgd
 #def run_model(train, valid, mode, param):
 #    return sgd.sgd_bias(train, valid, mode, param)
+
 #import hybrid as hb
 #def run_model(train, valid, mode, param):
 #    return hb.validation(train, valid, mode, param)
@@ -44,7 +51,7 @@ r = len(PARAM)
 SCORE = np.zeros((r, 2)) #1st column train, 2nd column valid
 # cross validation
 for k in range(num_folds):
-    print 'Fold: %d' % k
+    print 'Fold: %d' % (k + 1)
     span = n // num_folds
     valid = train_valid[k * span : (k + 1) * span]
     if k == 0: 
@@ -87,7 +94,28 @@ def display():
         plt.title("RMSE Plot")    
         plt.legend([trainplot, validplot], ["Train", "Valid"])
 
+def predict(train, test, pred_file):
+    y_hat, train_rss = run_model(train, test, 'prediction', 0)
+    for i, yi in enumerate(y_hat):
+        if yi < 0:
+            y_hat[i] = 0
+        if yi > 5:
+            y_hat[i] = 5
+    for i, entry in enumerate(test):
+        entry['rating'] = float(y_hat[i])
+    
+    util.write_predictions(test, pred_file)
+    
 display()
+
+
+
+test_filename  = 'data/ratings-test.csv'
+test           =  util.load_test(test_filename)
+pred_filename  = 'predictions/chrono_temporal_prime.csv'
+predict(train_valid, test, pred_filename)
+
+
 
 """
 x = np.zeros((n, r, 2)) # 2 layers, 1 for train predictions and 1 for valid predictions
