@@ -182,11 +182,16 @@ def sgd_bias(train, test, mode='validation', param=0):
      
     #tuned to lamb = 0.05 with RMSE = 0.7802252543829444
     #lamb = 4.01 with RMSE = 0.7747012079725805
-    lamb = 0.05 #regularization
+     
+    ####################### 
+    # lamb = 1 with RMSE = 0.7730765178141169 
+    lamb = 1 #regularization
     feature_dimension = 2
     gamma = 0.1 # learning rate
     initial = 0.1
-    num_iter = 1 #epoch
+    num_iter = 70 #epoch 70 to converge
+    
+    ########################
     
     initial_value = [initial] * feature_dimension
     for user in user_list:

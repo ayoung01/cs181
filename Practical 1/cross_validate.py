@@ -19,33 +19,38 @@ train_valid    = util.load_train(train_filename)
 
 ######### Tuning Parameters #########
 
-#PARAM = [1.9, 2.9, 3.9]
-PARAM = np.arange(2.5, 3.5, 0.1) 
+PARAM = [0.03, 0.07, 0.2, 0.3]
+#PARAM = np.arange(0.05, 5, 0.05) 
 
 num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
+
+
+
 
 #import data_processing as dp
 #dphelper = dp.data_processing()
 #dense, sparse = dphelper.split(train_valid)
 #train_valid = dense
 
-import baseline_chrono as bschrono
-def run_model(train, valid, mode, param):
-    return bschrono.baseline_chrono(train, valid, mode, param)
+#import baseline_chrono as bschrono
+#def run_model(train, valid, mode, param):
+#    return bschrono.baseline_chrono(train, valid, mode, param)
 
 #import baseline as bs
 #def run_model(train, valid, mode, param):
 #    return bs.baseline(train, valid, mode, param)
     
-#import sgd_bias as sgd
-#def run_model(train, valid, mode, param):
-#    return sgd.sgd_bias(train, valid, mode, param)
+import sgd_bias as sgd
+def run_model(train, valid, mode, param):
+    return sgd.sgd_bias(train, valid, mode, param)
 
 #import hybrid as hb
 #def run_model(train, valid, mode, param):
 #    return hb.validation(train, valid, mode, param)
 
 #####################################
+
+# cross-validation mode
 n = int(num_folds * (len(train_valid) // 5)) # e.g. length of num_folds * 40000
 r = len(PARAM)
 SCORE = np.zeros((r, 2)) #1st column train, 2nd column valid
@@ -67,6 +72,7 @@ for k in range(num_folds):
         train_rss, valid_rss = run_model(train, valid, 'validation', param)
         SCORE[i, 0] += train_rss; SCORE[i, 1] += valid_rss
 
+
 def calc_rmse(rss, mode):
     if mode == 'train':
         num_data_points = int(num_folds * 4 * (len(train_valid) // 5))
@@ -75,6 +81,7 @@ def calc_rmse(rss, mode):
     else:
         num_data_points = 0
     return float(np.sqrt(rss/num_data_points))
+ 
 
 def display():
     RMSE = np.zeros((r, 2))
@@ -91,8 +98,12 @@ def display():
     if r > 1:
         trainplot, = plt.plot(PARAM, RMSE[:, 0])
         validplot, = plt.plot(PARAM, RMSE[:, 1])
-        plt.title("RMSE Plot")    
-        plt.legend([trainplot, validplot], ["Train", "Valid"])
+    plt.title("RMSE Plot")    
+    plt.legend([trainplot, validplot], ["Train", "Valid"])
+    
+display()
+
+
 
 def predict(train, test, pred_file):
     y_hat, train_rss = run_model(train, test, 'prediction', 0)
@@ -102,17 +113,13 @@ def predict(train, test, pred_file):
         if yi > 5:
             y_hat[i] = 5
     for i, entry in enumerate(test):
-        entry['rating'] = float(y_hat[i])
-    
+        entry['rating'] = float(y_hat[i])    
     util.write_predictions(test, pred_file)
-    
-display()
 
-
-
+# prediction mode  
 test_filename  = 'data/ratings-test.csv'
 test           =  util.load_test(test_filename)
-pred_filename  = 'predictions/chrono_temporal_prime.csv'
+pred_filename  = 'predictions/sgd_converged.csv'
 predict(train_valid, test, pred_filename)
 
 
