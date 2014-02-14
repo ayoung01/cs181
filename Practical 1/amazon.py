@@ -40,13 +40,23 @@ for item in train:
 item_years = {} # {isbn1: 1994, isbn2: 1990, ...}
 for item in book_list:
     item_years[item['isbn']] = item['year']
-"""
+
 # 929264 books indexed by isbn
-amazon_data = util.load_amazon('/Users/ayoung/Desktop/Books.txt')
+# amazon_data = util.load_amazon('/Users/ayoung/Desktop/Books.txt')
 import pickle
-pickle.dump(amazon_data, open('amazon_parsed.p', 'wb'))
-# amazon_data = pickle.load(open('amazon_parsed.p', 'rb'))
+# pickle.dump(amazon_data, open('amazon_parsed.p', 'wb'))
+amazon_data = pickle.load(open('amazon_parsed.p', 'rb'))
 print 'amazon data loaded!'
+def refine_amazon_data(amazon_data):
+    refined_data = {}
+    for book, rating in amazon_data.iteritems():
+        if book in items.keys():
+            refined_data[book] = rating
+    return refined_data
+
+refined_data = refine_amazon_data(amazon_data)
+pickle.dump(refined_data, open('amazon_refined.p', 'wb'))
+
 
 amazon_baselines = {}
 for isbn, ratings in amazon_data.iteritems():
@@ -56,7 +66,6 @@ for isbn, ratings in amazon_data.iteritems():
     amazon_baselines[isbn] = a / (lambda2 + len(ratings))
 
 amazon_mean = 4.210194973215356
-"""
 
 #lambda2_candidates = np.arange(50)
 #15, 3.5, 0.7749015226558873
