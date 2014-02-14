@@ -4,7 +4,7 @@ import numpy as np
 import util
 import operator
 import math
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 user_list      = util.user_list
 book_list      = util.book_list
@@ -47,16 +47,11 @@ import pickle
 # pickle.dump(amazon_data, open('amazon_parsed.p', 'wb'))
 amazon_data = pickle.load(open('amazon_parsed.p', 'rb'))
 print 'amazon data loaded!'
-def refine_amazon_data(amazon_data):
-    refined_data = {}
-    for book, rating in amazon_data.iteritems():
-        if book in items.keys():
-            refined_data[book] = rating
-    return refined_data
-
-refined_data = refine_amazon_data(amazon_data)
+refined_data = {}
+for book, rating in amazon_data.iteritems():
+    if book in items.keys():
+        refined_data[book] = rating
 pickle.dump(refined_data, open('amazon_refined.p', 'wb'))
-
 
 amazon_baselines = {}
 for isbn, ratings in amazon_data.iteritems():
@@ -104,7 +99,7 @@ year_baselines = {}
 # for each book in training set
 for year, ratings in ratings_by_year.iteritems():
     a = 0.0
-    for rating in ratings.values()
+    for rating in ratings.values():
         a += (rating - train_mean) 
     year_baselines[year] = a / (lambda_t + len(ratings))   
 
