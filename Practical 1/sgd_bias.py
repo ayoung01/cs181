@@ -76,6 +76,7 @@ def sgd_bias(train, test, mode='validation', param=0):
                 q = float(items[isbn]['q'][j]); p = float(users[user]['p'][j]);
                 
                 r_hat = train_mean + bi + bu + q * p
+                #r_hat = train_mean + q * p
                 e = rating - r_hat
                            
                 items[isbn]['q'][j] = q + gamma * (e * p - lamb * q)
@@ -147,7 +148,7 @@ def sgd_bias(train, test, mode='validation', param=0):
             bi = item_baselines[isbn]; bu = user_baselines[user];
             q = np.array(items[isbn]['q'][:n]); p = np.array(users[user]['p'][:n]);   
             if mode == 'rss': y[i] = entry['rating']
-            if len(items[isbn]) == 1:
+            if len(items[isbn]) < 2:
                 value = float(train_mean + bi + bu);
                 if value < 0:
                     y_hat[i] = 0
@@ -156,7 +157,9 @@ def sgd_bias(train, test, mode='validation', param=0):
                 else:
                     y_hat[i] = value
             else:
-                value = float(train_mean + bi + bu + np.dot(q.T, p))
+                value = float(train_mean + bi + bu + np.dot(q.T, p))           
+                #value = float(train_mean + np.dot(q.T, p))
+                #print (float(np.dot(q.T, p)))
                 if value < 0:
                     y_hat[i] = 0
                 elif value > 5:
