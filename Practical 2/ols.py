@@ -235,7 +235,8 @@ def feats(md):
         
     return d
     
-    
+
+"""
 ## The following function does the feature extraction, learning, and prediction
 trainfile = "train.xml"
 testfile = "testcases.xml"
@@ -251,11 +252,21 @@ print "done extracting training features"
 X_train = X_train.toarray()
 n, p = X_train.shape
 
-print "Imputation"
+
+import pickle as pickle
+pickle.dump((X_train, global_feat_dict, y_train, train_ids),
+            open('processed_data.p', 'wb'))
+"""
+import pickle as pickle
+X_train,global_feat_dict,y_train,train_ids = \
+            pickle.load(open('processed_data.p', 'rb'))
+n, p = X_train.shape
+
 # missing value imputation, missing value is encoded as -1    
 from sklearn.preprocessing import Imputer
 imp = Imputer(missing_values= -1, strategy='mean', axis=0)
 X_train = imp.fit_transform(X_train)
+
 
 print "Scatter Matrix"   
 from pandas.tools.plotting import scatter_matrix
@@ -263,10 +274,21 @@ from pandas import DataFrame
 
 
 X_train_origin = X_train.copy()
+y_train_origin = y_train.copy()
 
+# number_of_screens should be raised to the 8th power
+# production_budget is mostly linear, somewhat 2nd degree
+y_train = y_train_origin.copy()
 X_train = X_train_origin.copy()
+
+
+y_train = np.log(y_train)
 X_train[:, global_feat_dict['number_of_screens']] = \
-    X_train[:, global_feat_dict['number_of_screens']]**8
+    np.log(X_train[:, global_feat_dict['number_of_screens']]) ** 11
+X_train[:, global_feat_dict['production_budget']] = \
+    np.log(X_train[:, global_feat_dict['production_budget']]) ** 3
+
+
 
 quant_set = [global_feat_dict['running_time'], global_feat_dict['number_of_screens'], \
                 global_feat_dict['production_budget']]
