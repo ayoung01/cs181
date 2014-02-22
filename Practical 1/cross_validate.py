@@ -19,15 +19,15 @@ train_valid    = util.load_train(train_filename)
 
 ######### Tuning Parameters #########
 
-PARAM = [0.03, 0.07, 0.2, 0.3]
+PARAM = [0.05, 0.1, 0.3, 0.5]
 #PARAM = np.arange(0.05, 5, 0.05) 
 
-num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
+num_folds = 1 # always 5-fold cross-validate, this decides how many folds to run
 
 
 
 
-#import data_processing as dp
+##import data_processing as dp
 #dphelper = dp.data_processing()
 #dense, sparse = dphelper.split(train_valid)
 #train_valid = dense
@@ -40,9 +40,14 @@ num_folds = 5 # always 5-fold cross-validate, this decides how many folds to run
 #def run_model(train, valid, mode, param):
 #    return bs.baseline(train, valid, mode, param)
     
-import sgd_bias as sgd
+#import sgd_bias as sgd_bias
+#def run_model(train, valid, mode, param):
+#    return sgd_bias.sgd_bias(train, valid, mode, param)
+    
+import sgd as sgd
 def run_model(train, valid, mode, param):
     return sgd.sgd_bias(train, valid, mode, param)
+
 
 #import hybrid as hb
 #def run_model(train, valid, mode, param):
@@ -98,8 +103,8 @@ def display():
     if r > 1:
         trainplot, = plt.plot(PARAM, RMSE[:, 0])
         validplot, = plt.plot(PARAM, RMSE[:, 1])
-    plt.title("RMSE Plot")    
-    plt.legend([trainplot, validplot], ["Train", "Valid"])
+        plt.title("RMSE Plot")    
+        plt.legend([trainplot, validplot], ["Train", "Valid"])
     
 display()
 
@@ -117,11 +122,12 @@ def predict(train, test, pred_file):
     util.write_predictions(test, pred_file)
 
 # prediction mode  
+"""
 test_filename  = 'data/ratings-test.csv'
 test           =  util.load_test(test_filename)
 pred_filename  = 'predictions/sgd_converged.csv'
 predict(train_valid, test, pred_filename)
-
+"""
 
 
 """
