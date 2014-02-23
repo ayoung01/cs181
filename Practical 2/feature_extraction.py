@@ -236,7 +236,7 @@ def feats(md):
     return d
     
 
-
+"""
 ## The following function does the feature extraction, learning, and prediction
 trainfile = "train.xml"
 testfile = "testcases.xml"
@@ -251,20 +251,24 @@ X_train,global_feat_dict,y_train,train_ids = extract_feats(ffs, trainfile)
 print "done extracting training features"
 X_train = X_train.toarray()
 n, p = X_train.shape
-
+"""
 
 #import pickle as pickle
 #pickle.dump((X_train, global_feat_dict, y_train, train_ids),
 #            open('processed_data.p', 'wb'))
 
 
-"""
+
 # collecting un-transformed features
 import pickle as pickle
 
 # quantitative features
 X_quant,global_feat_dict,y_train,train_ids = \
             pickle.load(open('processed_data.p', 'rb'))
+    
+# num_highest_grossing_actors    
+n_hi = np.load(open('num_hi_actors.npy', 'rb'))
+X_quant[:, 5] = n_hi
 
 # text sentiment features
 avg, prop, pos, neg, posprop, negprop = \
@@ -295,7 +299,7 @@ X_train = np.concatenate((X_quant, X_wc, X_genres, X_companies, X_ratings, X_sen
 pickle.dump((X_train, global_feat_dict, y_train, train_ids),
             open('features.p', 'wb'))
             
-"""
+
 
 
 

@@ -10,7 +10,7 @@ import numpy as np
 
 """
 X_train.shape = (1147, 61)
-8 number_of_screens
+8 number_of_screens 0.65857***
 11 production_budget
 
 0 christmas_release
@@ -27,13 +27,13 @@ X_train.shape = (1147, 61)
 6 num_oscar_winning_actors
 7 num_oscar_winning_directors
 
-14 review word count
-15-36 genres
-37-49 companies
-50-54 ratings
+14 review word count 0.14099***
+15-36 genres 0.46119***
+37-49 companies 0.29367***
+50-54 ratings 0.39632***
 
 12 running_time
-55-60 sentiments 
+55-60 sentiments 0.28247*** 58 -> 0.16029 # number of negative [0] sentences in review
 
 observations:
 1. companies sharply divide high and low profile revenues 
@@ -44,7 +44,13 @@ X_train, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', '
 ## Segmentation
 #mask = X_train[:, 8] < 100
 #mask = np.array([all(x) for x in zip(X_train[:,8]>100, X_train[:,8]<1000)])
-mask = X_train[:, 8] > 1000
+#mask = X_train[:, 8] > 1000
+mask = X_train[:, 8] > -1
+
+## Imputation
+from sklearn.preprocessing import Imputer
+imp = Imputer(missing_values= -1, strategy='mean', axis=0)
+X_train = imp.fit_transform(X_train)
 
 ## transformation
 # log y
@@ -57,29 +63,42 @@ X_train[:, 8] = X_train[:, 8] ** 2
 X_train[:, 11] = X_train[:, 11] ** 0.3
 
 
-# discard highgest_grossing_actors_present and num_highest_grossing_actors because missing
+# discard highgest_grossing_actors_present because missing: 1
 pass
 
-# discard num_oscar_winning_directors beacuse same as oscar_winning_directors_present
+# discard num_oscar_winning_directors: 7
 pass
 
-# discard genres columns  under 6 counts
-pass
-
-# discard companies columns under 1 counts
-
-# discard ratings collumns under 2 counts
+# discard genres columns  under 6 counts: 15, 17, 25, 28, 32 
+# discard companies columns under 1 counts: 38, 40, 41, 46
+# discard ratings collumns under 2 counts: 54
 
 
-display_set = [12]
+#discard = set([1, 7, 15, 17, 25, 28, 32, 38, 40, 41, 46, 54])
+#keep = np.array(list(set(range(0,61)) - discard))
+#keep = np.arange(0,61)
+#keep = np.arange(50, 55)
+keep = [58]
+
+X_regress = X_train[mask,:][:,keep]
+y_regress = y_train[mask, np.newaxis]
+
+from sklearn import linear_model
+regr = linear_model.LinearRegression()
+regr.fit(X_regress, y_regress)
+print('Coefficients: \n', regr.coef_)
+print('R^2: %.5f' % regr.score(X_regress, y_regress))
+
+
+
+"""
+
+display_set = [11]
 y_plot = y_train[mask, np.newaxis]
 X_plot = X_train[mask,:][:,display_set]
-
-
-
 from pandas.tools.plotting import scatter_matrix
 from pandas import DataFrame
 df = DataFrame(np.concatenate((y_plot, X_plot), axis=1))
 scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
-
+"""
 
