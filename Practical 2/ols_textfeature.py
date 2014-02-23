@@ -236,6 +236,7 @@ print "extracting training features..."
 X_train,y_train,train_ids = extract_feats(ffs, trainfile)
 print "done extracting training features"
 
+# create inputs for Stanford NLP
 filelist = open('reviewlist.txt', 'w')
 for i, reviews in enumerate(X_train):
     for reviewer, text in reviews.iteritems():
@@ -247,4 +248,18 @@ for i, reviews in enumerate(X_train):
             f.write(text)
             f.close()
             filelist.write(filename+'\n')
-filelist.close()
+
+# dump average review word counts for each movie
+wordcounts = open('wordcounts.txt', 'w')
+for i, reviews in enumerate(X_train):
+    num_reviews = 0.0
+    num_words = 0.0
+    for reviewer, text in reviews.iteritems():
+        if text == -1:
+            continue
+        else:
+            wordcount = len(text.split())
+            num_words += wordcount
+            num_reviews += 1
+    wordcounts.write(num_words/num_reviews)
+wordcounts.close()
