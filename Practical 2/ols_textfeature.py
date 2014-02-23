@@ -222,7 +222,7 @@ def feats(md):
     except:
         d['VV']  = -1
     
-    
+    d['release_date']         =   parser.parse(md.__dict__['release_date'])
     
     return d
     

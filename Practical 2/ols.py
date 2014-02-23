@@ -293,8 +293,31 @@ X_train[:, global_feat_dict['production_budget']] = \
 quant_set = [global_feat_dict['running_time'], global_feat_dict['number_of_screens'], \
                 global_feat_dict['production_budget']]
 df = DataFrame(np.concatenate((y_train[:, np.newaxis], X_train[:,quant_set]), axis=1))
-scatter_matrix(df, alpha=0.2, figsize=(p+1, p+1), diagonal='kde')
-?
+
+scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
+
+avg, prop, pos, neg, posprop, negprop = \
+            pickle.load(open('avg_prop_pos_neg_posprop_negprop.pickle', 'rb'))
+avg = np.array(avg)[:, np.newaxis]
+prop = np.array(prop)[:, np.newaxis]
+pos = np.array(pos)[:, np.newaxis]
+neg = np.array(neg)[:, np.newaxis]
+posprop = np.array(posprop)[:, np.newaxis]
+negprop = np.array(negprop)[:, np.newaxis]
+X_sentiment = np.concatenate((avg, prop, pos, neg, posprop, negprop), axis=1)
+
+X_sentiment_origin = X_sentiment.copy()
+
+X_sentiment = X_sentiment_origin.copy()
+y_train = y_train_origin.copy()
+
+y_train = np.log(y_train)
+mask = np.array(y_train > 14)
+y_train = y_train[mask]
+X_sentiment += 0.1
+X_sentiment = np.log(X_sentiment[mask, :])
+df = DataFrame(np.concatenate((y_train[:, np.newaxis], X_sentiment), axis=1))
+scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
 
 """
 # TODO train here, and return regression parameters
