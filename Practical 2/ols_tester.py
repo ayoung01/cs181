@@ -262,39 +262,9 @@ X_train,global_feat_dict,y_train,train_ids = \
             pickle.load(open('processed_data.p', 'rb'))
 n, p = X_train.shape
 
-# missing value imputation, missing value is encoded as -1    
-from sklearn.preprocessing import Imputer
-imp = Imputer(missing_values= -1, strategy='mean', axis=0)
-X_train = imp.fit_transform(X_train)
-
-
 print "Scatter Matrix"   
 from pandas.tools.plotting import scatter_matrix
 from pandas import DataFrame
-
-
-X_train_origin = X_train.copy()
-y_train_origin = y_train.copy()
-
-# number_of_screens should be raised to the 8th power
-# production_budget is mostly linear, somewhat 2nd degree
-y_train = y_train_origin.copy()
-X_train = X_train_origin.copy()
-
-
-y_train = np.log(y_train)
-X_train[:, global_feat_dict['number_of_screens']] = \
-    np.log(X_train[:, global_feat_dict['number_of_screens']]) ** 11
-X_train[:, global_feat_dict['production_budget']] = \
-    np.log(X_train[:, global_feat_dict['production_budget']]) ** 3
-
-
-
-quant_set = [global_feat_dict['running_time'], global_feat_dict['number_of_screens'], \
-                global_feat_dict['production_budget']]
-df = DataFrame(np.concatenate((y_train[:, np.newaxis], X_train[:,quant_set]), axis=1))
-
-scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
 
 avg, prop, pos, neg, posprop, negprop = \
             pickle.load(open('avg_prop_pos_neg_posprop_negprop.pickle', 'rb'))
@@ -304,17 +274,15 @@ pos = np.array(pos)[:, np.newaxis]
 neg = np.array(neg)[:, np.newaxis]
 posprop = np.array(posprop)[:, np.newaxis]
 negprop = np.array(negprop)[:, np.newaxis]
+
 X_sentiment = np.concatenate((avg, prop, pos, neg, posprop, negprop), axis=1)
-
-X_sentiment_origin = X_sentiment.copy()
-
-X_sentiment = X_sentiment_origin.copy()
-y_train = y_train_origin.copy()
 
 y_train = np.log(y_train)
 mask = np.array(y_train > 14)
 y_train = y_train[mask]
+
 X_sentiment += 0.1
 X_sentiment = np.log(X_sentiment[mask, :])
+
 df = DataFrame(np.concatenate((y_train[:, np.newaxis], X_sentiment), axis=1))
 scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
