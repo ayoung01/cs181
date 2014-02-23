@@ -228,7 +228,10 @@ def feats(md):
     d['origins']  =   md.__dict__['origins']
     d['rating'] = md.__dict__['rating']
     d['company'] = md.__dict__['company']
-    
+    try:
+        d['num_highest_grossing_actors'] = md.__dict__['num_highest_grossing_actors']
+    except:
+        d['num_highest_grossing_actors'] = 0
     return d
     
     
@@ -244,8 +247,8 @@ ffs = [feats]
 print "extracting training features..."
 X_train,y_train,train_ids = extract_feats(ffs, trainfile)
 print "done extracting training features"
-genres_uniq = []; origins_uniq = []; genres = []; release_dates = []
-origins = []; ratings = []; companies = [];
+genres_uniq = []; origins_uniq = []; genres = []; release_dates = [];
+origins = []; ratings = []; companies = []; hi_actors = [];
 for features in X_train:
     genres.append(features['genres'])
     genres_uniq.extend(features['genres'])
@@ -254,6 +257,7 @@ for features in X_train:
     origins.append(features['origins'])
     ratings.append(features['rating'])
     companies.append(features['company'])
+    hi_actors.append(features['num_highest_grossing_actors'])
     
 genres_uniq = list(set(genres_uniq))
 origins_uniq = list(set(origins_uniq))
@@ -295,6 +299,7 @@ for company in companies_uniq:
         companies_ind.append(ind)
 np.save(open('companies.npy', 'wb'), np.array(companies_ind).T)
 
+np.save(open('hi_actors.npy', 'wb'), np.array(hi_actors).T)
 #companies_by_freq = []
 #for i, company in enumerate(companies_uniq):
 #    companies_by_freq.append((sum(companies_ind[i]), company))
