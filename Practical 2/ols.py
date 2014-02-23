@@ -225,12 +225,12 @@ def feats(md):
         
         
     try: 
-        d['highgest_grossing_actors_present'] = \
-            float(md.__dict__['highgest_grossing_actors_present'])
+        d['highest_grossing_actors_present'] = \
+            float(md.__dict__['highest_grossing_actors_present'])
         d['num_highest_grossing_actors']     = \
             float(md.__dict__['num_highest_grossing_actors'])     
     except KeyError:
-        d['highgest_grossing_actors_present']    = 0.0
+        d['highest_grossing_actors_present']    = 0.0
         d['num_highest_grossing_actors']        = 0.0
         
     return d
@@ -294,7 +294,7 @@ quant_set = [global_feat_dict['running_time'], global_feat_dict['number_of_scree
                 global_feat_dict['production_budget']]
 df = DataFrame(np.concatenate((y_train[:, np.newaxis], X_train[:,quant_set]), axis=1))
 scatter_matrix(df, alpha=0.2, figsize=(p+1, p+1), diagonal='kde')
-
+?
 
 """
 # TODO train here, and return regression parameters

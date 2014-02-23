@@ -55,6 +55,8 @@ from scipy import sparse
 from scipy.sparse import linalg as splinalg
 
 import util
+import pickle
+from dateutil import parser
 
 def extract_feats(ffs, datafile="train.xml", global_feat_dict=None):
     """
@@ -220,6 +222,8 @@ def feats(md):
     except:
         d['VV']  = -1
     
+    
+    
     return d
     
     
@@ -250,7 +254,7 @@ for i, reviews in enumerate(X_train):
             filelist.write(filename+'\n')
 
 # dump average review word counts for each movie
-wordcounts = open('wordcounts.txt', 'w')
+wordcounts = []
 for i, reviews in enumerate(X_train):
     num_reviews = 0.0
     num_words = 0.0
@@ -261,5 +265,5 @@ for i, reviews in enumerate(X_train):
             wordcount = len(text.split())
             num_words += wordcount
             num_reviews += 1
-    wordcounts.write(num_words/num_reviews)
-wordcounts.close()
+    wordcounts.append(num_words/num_reviews)
+pickle.dump(wordcounts, open('wordcounts.pickle', 'wb'))
