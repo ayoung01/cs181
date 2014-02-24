@@ -335,8 +335,8 @@ origins_uniq_clean = ['USA', 'UK', 'Canada', 'Brazil', 'HongKong', 'Italy', 'Ire
 for origin in origins_uniq_clean:
     origins_ind.append([int(origin in x) for x in origins])
 
-for i, country in enumerate(origins_ind):
-    print (origins_uniq_clean[i], sum(origins_ind[i]))
+#for i, country in enumerate(origins_ind):
+#    print (origins_uniq_clean[i], sum(origins_ind[i])),
     
 np_ratings = np.concatenate((g, pg, pg13, r, nc17), axis=1)
 np_release_dates = np.array(release_dates)[:, np.newaxis]
