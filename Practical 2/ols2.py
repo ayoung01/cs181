@@ -127,11 +127,12 @@ keep = np.arange(X_train.shape[1])
 #keep = np.array(range(37, 50))
 #keep = [11]
 
+### OLS
 rss = 0    
 for i in range(len(MASK)):    
     mask = MASK[i]
     X_regress = X_train[mask,:][:,keep]
-    y_regress = y_train[mask, np.newaxis]
+    y_regress = y_train[mask]
     
     from sklearn import linear_model
     regr = linear_model.LinearRegression()
@@ -141,6 +142,50 @@ for i in range(len(MASK)):
     rss += np.sum((regr.predict(X_regress) - y_regress) ** 2)
     
 print("Overall:  %.5f" % (rss/1147))
+
+### LARS-CV
+mask = MASK[2]
+X_regress = X_train[mask,:][:,keep]
+y_regress = y_train[mask]
+
+import time
+from sklearn.linear_model import LassoLarsCV
+import pylab as pl
+
+print("Computing regularization path using the Lars lasso...")
+t1 = time.time()
+model = LassoLarsCV(cv=20).fit(X_regress, y_regress)
+t_lasso_lars_cv = time.time() - t1
+
+# Display results
+m_log_alphas = -np.log10(model.cv_alphas_)
+
+pl.figure()
+pl.plot(m_log_alphas, model.cv_mse_path_, ':')
+pl.plot(m_log_alphas, model.cv_mse_path_.mean(axis=-1), 'k',
+        label='Average across the folds', linewidth=2)
+pl.axvline(-np.log10(model.alpha_), linestyle='--', color='k',
+           label='alpha CV')
+pl.legend()
+
+pl.xlabel('-log(alpha)')
+pl.ylabel('Mean square error')
+pl.title('Mean square error on each fold: Lars (train time: %.2fs)'
+         % t_lasso_lars_cv)
+pl.axis('tight')
+pl.show()
+
+# plug into lasso
+clf = linear_model.LassoLars(alpha=model.alpha_)
+clf.fit(X_regress, y_regress)  
+active = clf.coef_ != 0
+
+# run through ols 
+regr = linear_model.LinearRegression()
+regr.fit(X_regress[:, active], y_regress)
+print("Average squared residual: %.5f"
+  % np.mean((regr.predict(X_regress[:, active]) - y_regress) ** 2))
+    
 
 """
 if len(keep) == 1 and i == 3:
