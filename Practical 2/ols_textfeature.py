@@ -228,6 +228,7 @@ def feats(md):
     d['origins']  =   md.__dict__['origins']
     d['rating'] = md.__dict__['rating']
     d['company'] = md.__dict__['company']
+    d['director'] = md.__dict__['directors']
     try:
         d['num_highest_grossing_actors'] = md.__dict__['num_highest_grossing_actors']
         d['highest_grossing_actor'] = md.__dict__['highest_grossing_actor']
@@ -250,9 +251,9 @@ ffs = [feats]
 print "extracting training features..."
 X_train,y_train,train_ids = extract_feats(ffs, trainfile)
 print "done extracting training features"
-genres_uniq = []; origins_uniq = []; hi_actors_uniq = [];
-genres = []; release_dates = []; hi_actors = [];
-origins = []; ratings = []; companies = []; num_hi_actors = [];
+genres_uniq = []; origins_uniq = []; hi_actors_uniq = []; directors_uniq = [];
+genres = []; release_dates = []; hi_actors = []; num_hi_actors = [];
+origins = []; ratings = []; companies = []; directors = [];
 
 for features in X_train:
     genres.append(features['genres'])
@@ -265,14 +266,17 @@ for features in X_train:
     num_hi_actors.append(features['num_highest_grossing_actors'])
     hi_actors.append(features['highest_grossing_actor'])
     hi_actors_uniq.extend(features['highest_grossing_actor'])
+    directors.append(features['director'])
+    directors_uniq.extend(features['director'])
     
 genres_uniq = list(set(genres_uniq)); genres_uniq.pop(0) # gets rid of empty genre
 origins_uniq = list(set(origins_uniq))
 ratings_uniq = list(set(ratings))
 companies_uniq = list(set(companies))
 hi_actors_uniq = list(set(hi_actors_uniq))
+directors_uniq = list(set(directors_uniq))
 
-genres_ind = []; companies_ind = []; hi_actors_ind = []; origins_ind = [];
+genres_ind = []; companies_ind = []; hi_actors_ind = []; origins_ind = []; directors_ind = [];
 
 # indicator arrays for ratings
 g = np.array([int(x=='G') for x in ratings])[:, np.newaxis]
@@ -301,8 +305,23 @@ for x, company in companies_by_freq[:40]:
     companies_uniq_sorted.append(company)
 companies_ind=[]
 for company in companies_uniq_sorted:
-    ind = [int(x==company) for x in companies]
-    companies_ind.append(ind)
+    companies_ind.append([int(x==company) for x in companies])
+
+# sort directors by number of movies in training set
+for director in directors_uniq:
+    ind = [int(director in x) for x in directors]
+    directors_ind.append(ind)      
+directors_by_freq = []
+for i, director in enumerate(directors_uniq):
+    directors_by_freq.append((sum(directors_ind[i]), director))
+    directors_by_freq = sorted(directors_by_freq, reverse = True)
+directors_uniq_sorted = []
+# truncate by top 40 directors
+for x, director in directors_by_freq[:10]:
+    directors_uniq_sorted.append(director)
+directors_ind=[]
+for director in directors_uniq_sorted:
+    directors_ind.append([int(director in x) for x in directors])
 """
 # parse origins (cleaned manually)
 origins_uniq_clean = []
@@ -323,11 +342,12 @@ np_hi_actors = np.array(hi_actors_ind).T
 np_genres = np.array(genres_ind).T
 np_companies = np.array(companies_ind).T
 np_origins = np.array(origins_ind).T
+np_directors = np.array(directors_ind).T
 
-feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean
+feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
 
-np_feat = np.concatenate((np_ratings,np_release_dates,np_num_hi_actors,np_hi_actors,np_genres,np_companies,np_origins), axis = 1)
+np_feat = np.concatenate((np_ratings,np_release_dates,np_num_hi_actors,np_hi_actors,np_genres,np_companies,np_origins,np_directors), axis = 1)
 print "Dimensions of feature matrix: " + str(np_feat.shape)
 np.save(open('feat.npy', 'wb'), np_feat)
 
