@@ -143,11 +143,54 @@ for i in range(len(MASK)):
     
 print("Overall:  %.5f" % (rss/1147))
 
-### LARS-CV
-mask = MASK[2]
+
+mask = MASK[1]
 X_regress = X_train[mask,:][:,keep]
 y_regress = y_train[mask]
 
+print "Pre Variable Selection"
+# validation scores for OLS
+from sklearn import cross_validation
+regr_final = linear_model.LinearRegression()
+scores = -1 * cross_validation.cross_val_score(
+        regr_final, X_regress, y_regress, cv=20, scoring = 'mean_squared_error')
+#pl.clf()
+#pl.plot(scores)        
+print "OLS: %.5f +- %.5f" % (np.mean(scores), np.std(scores))
+
+
+from sklearn.grid_search import GridSearchCV
+tuned_parameters = [{'n_components': range(1, 20)}]
+from sklearn.cross_decomposition import PLSRegression
+pls = PLSRegression(n_components=1)
+clf = GridSearchCV(pls, tuned_parameters, cv=20, scoring='mean_squared_error')
+clf.fit(X_regress, y_regress)
+#print("Grid scores on development set:")
+#for params, mean_score, scores in clf.grid_scores_:
+#    print("%0.3f (+/-%0.03f) for %r"
+#          % (mean_score, scores.std() / 2, params))
+for params, mean_score, scores in clf.grid_scores_:
+    if mean_score == clf.best_score_:
+        print ("PLS Best: %.5f +- %.5f for %s" %
+            (-mean_score, scores.std(), params))
+
+
+alphas = list(np.arange(1e9,2e9,1e8))
+tuned_parameters = [{'alpha': alphas}]
+ridge = linear_model.Ridge(alpha = 1)
+search = GridSearchCV(ridge, tuned_parameters, cv=20, scoring='mean_squared_error')
+search.fit(X_regress, y_regress)
+#print("Grid scores on development set:")
+#for params, mean_score, scores in search.grid_scores_:
+#    print("%0.3f (+/-%0.03f) for %r"
+#          % (mean_score, scores.std() / 2, params))
+for params, mean_score, scores in search.grid_scores_:
+    if mean_score == search.best_score_:
+        print ("Ridge Best: %.5f +- %.5f for %s" %
+            (-mean_score, scores.std(), params))
+
+
+print "Variable Selection"
 import time
 from sklearn.linear_model import LassoLarsCV
 import pylab as pl
@@ -160,6 +203,7 @@ t_lasso_lars_cv = time.time() - t1
 # Display results
 m_log_alphas = -np.log10(model.cv_alphas_)
 
+"""
 pl.figure()
 pl.plot(m_log_alphas, model.cv_mse_path_, ':')
 pl.plot(m_log_alphas, model.cv_mse_path_.mean(axis=-1), 'k',
@@ -174,19 +218,64 @@ pl.title('Mean square error on each fold: Lars (train time: %.2fs)'
          % t_lasso_lars_cv)
 pl.axis('tight')
 pl.show()
+"""
 
-# plug into lasso
 clf = linear_model.LassoLars(alpha=model.alpha_)
 clf.fit(X_regress, y_regress)  
 active = clf.coef_ != 0
+X_regress= X_regress[:, active]
 
-# run through ols 
-regr = linear_model.LinearRegression()
-regr.fit(X_regress[:, active], y_regress)
-print("Average squared residual: %.5f"
-  % np.mean((regr.predict(X_regress[:, active]) - y_regress) ** 2))
-    
+# validation scores for OLS
+from sklearn import cross_validation
+regr_final = linear_model.LinearRegression()
+scores = -1 * cross_validation.cross_val_score(
+        regr_final, X_regress, y_regress, cv=20, scoring = 'mean_squared_error')
+#pl.clf()
+#pl.plot(scores)        
+print "OLS: %.5f +- %.5f" % (np.mean(scores), np.std(scores))
 
+
+from sklearn.grid_search import GridSearchCV
+tuned_parameters = [{'n_components': range(1, X_regress.shape[1])}]
+from sklearn.cross_decomposition import PLSRegression
+pls = PLSRegression(n_components=1)
+clf = GridSearchCV(pls, tuned_parameters, cv=20, scoring='mean_squared_error')
+clf.fit(X_regress, y_regress)
+#print("Grid scores on development set:")
+#for params, mean_score, scores in clf.grid_scores_:
+#    print("%0.3f (+/-%0.03f) for %r"
+#          % (mean_score, scores.std() / 2, params))
+for params, mean_score, scores in clf.grid_scores_:
+    if mean_score == clf.best_score_:
+        print ("PLS Best: %.5f +- %.5f for %s" %
+            (-mean_score, scores.std(), params))
+
+
+alphas = list(np.arange(1,3,0.1))
+tuned_parameters = [{'alpha': alphas}]
+ridge = linear_model.Ridge(alpha = 1)
+search = GridSearchCV(ridge, tuned_parameters, cv=20, scoring='mean_squared_error')
+search.fit(X_regress, y_regress)
+#print("Grid scores on development set:")
+#for params, mean_score, scores in clf.grid_scores_:
+#    print("%0.3f (+/-%0.03f) for %r"
+#          % (mean_score, scores.std() / 2, params))
+for params, mean_score, scores in search.grid_scores_:
+    if mean_score == search.best_score_:
+        print ("Ridge Best: %.5f +- %.5f for %s" %
+            (-mean_score, scores.std(), params))
+
+
+"""
+alphas = list(np.arange(1,3,0.1))
+clf = linear_model.RidgeCV(alphas=alphas, scoring = 'mean_squared_error', 
+                           cv=None, store_cv_values=True)
+clf.fit(X_regress, y_regress)
+idx = alphas.index(clf.alpha_)
+scores = np.abs(clf.cv_values_[:, idx])
+print ("Ridge Best: %.5f +- %.5f for %s" %
+            (-scores.mean(), scores.std(), clf.alpha_))
+"""
 """
 if len(keep) == 1 and i == 3:
     pl.scatter(X_regress, y_regress,  color='black')
