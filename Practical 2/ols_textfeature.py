@@ -260,7 +260,7 @@ for features in X_train:
     genres_uniq.extend(features['genres'])
     release_dates.append(features['release_date'])
     origins_uniq.extend(features['origins'])
-    origins.append(features['origins'])
+    origins.append(features['origins'][0])
     ratings.append(features['rating'])
     companies.append(features['company'])
     num_hi_actors.append(features['num_highest_grossing_actors'])
@@ -335,6 +335,9 @@ origins_uniq_clean = ['USA', 'UK', 'Canada', 'Brazil', 'HongKong', 'Italy', 'Ire
 for origin in origins_uniq_clean:
     origins_ind.append([int(origin in x) for x in origins])
 
+for i, country in enumerate(origins_ind):
+    print (origins_uniq_clean[i], sum(origins_ind[i]))
+    
 np_ratings = np.concatenate((g, pg, pg13, r, nc17), axis=1)
 np_release_dates = np.array(release_dates)[:, np.newaxis]
 np_num_hi_actors = np.array(num_hi_actors)[:, np.newaxis]
