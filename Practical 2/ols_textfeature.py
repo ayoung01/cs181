@@ -235,7 +235,6 @@ def feats(md):
     except:
         d['num_highest_grossing_actors'] = 0
         d['highest_grossing_actor'] = []
-        
     return d
 # We need to first get the highest grossing actors present; discard number of oscar-winning directors (always 1 or 0)
 # production budget has missing values
@@ -350,7 +349,15 @@ np_directors = np.array(directors_ind).T
 feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
 
-np_feat = np.concatenate((np_ratings,np_release_dates,np_num_hi_actors,np_hi_actors,np_genres,np_companies,np_origins,np_directors), axis = 1)
+
+#np_feat = np.concatenate((np_ratings,np_release_dates,np_num_hi_actors,
+#                          np_hi_actors,np_genres,np_companies,
+#                          np_origins,np_directors), axis = 1)
+                          
+np_feat = np.concatenate((np_release_dates,
+                          np_hi_actors,
+                          np_origins,np_directors), axis = 1)
+                          
 print "Dimensions of feature matrix: " + str(np_feat.shape)
 np.save(open('feat.npy', 'wb'), np_feat)
 

@@ -47,35 +47,25 @@ X_train, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', '
 #mask = np.array([all(x) for x in zip(X_train[:,8]>100, X_train[:,8]<1000)])
 #mask = X_train[:, 8] > 1000
 #mask = X_train[:, 8] > -1
-MASK = [X_train[:, 8] < 100, 
-        np.array([all(x) for x in zip(X_train[:,8]>100, X_train[:,8]<1000)]),
-        X_train[:, 8] > 1000,
-        X_train[:, 8] > -1 ]
+low = 10
+high = 300
+MASK = [X_train[:, 8] < low, 
+        np.array([all(x) for x in zip(X_train[:,8]>low, X_train[:,8]<high)]),
+        X_train[:, 8] > high]
 
 #discard = set([1, 7, 15, 17, 25, 28, 32, 38, 40, 41, 46, 54])
 #keep = np.array(list(set(range(0,61)) - discard))
 keep = np.arange(0,61)
 #keep = np.arange(50, 55)
 #keep = np.array(range(37, 50))
-    
+#keep = [11]
 
-    
+
+"""
 # do not use production budget to predict low revenue movies
 lamb_prod = 92 # ols optimal at 92
 mask_prod = X_train[:, 8] < lamb_prod
 X_train[mask_prod, 11] = 0
-
-"""
-lamb_screen = 1000 # ols optimal at 92
-mask_screen = X_train[:, 8] < lamb_screen
-X_train[mask_screen, 8] = 0
-
-lamb_company = 500 # ols optimal at 5
-mask_company = X_train[:, 8] > lamb_company
-set_company = np.arange(37, 50)
-for i in set_company:
-    X_train[mask_company,i] = 0
-"""
 
 lamb_wc = 5 # ols optimal at 5
 mask_wc = X_train[:, 8] < lamb_wc
@@ -92,15 +82,26 @@ mask_genre = X_train[:, 8] > lamb_genre
 set_genre = np.arange(15, 37)
 for i in set_genre:
     X_train[mask_genre,i] = 0
-    
-    
-        
+       
 lamb_genre = 50 # ols 0.93673 at 50
 mask_genre = X_train[:, 8] > lamb_genre
 set_genre = np.arange(55, 61)
 for i in set_genre:
     X_train[mask_genre,i] = 0
+"""
 
+
+"""
+lamb_screen = 1000 # ols optimal at 92
+mask_screen = X_train[:, 8] < lamb_screen
+X_train[mask_screen, 8] = 0
+
+lamb_company = 500 # ols optimal at 5
+mask_company = X_train[:, 8] > lamb_company
+set_company = np.arange(37, 50)
+for i in set_company:
+    X_train[mask_company,i] = 0
+"""
  
 ## Imputation
 from sklearn.preprocessing import Imputer
@@ -127,9 +128,8 @@ pass
 # discard companies columns under 1 counts: 38, 40, 41, 46
 # discard ratings collumns under 2 counts: 54
     
-    
-
-for i in [0, 1, 2, 3]:    
+rss = 0    
+for i in range(len(MASK)):    
     mask = MASK[i]
     X_regress = X_train[mask,:][:,keep]
     y_regress = y_train[mask, np.newaxis]
@@ -137,19 +137,31 @@ for i in [0, 1, 2, 3]:
     from sklearn import linear_model
     regr = linear_model.LinearRegression()
     regr.fit(X_regress, y_regress)
-    #print('Coefficients: \n', regr.coef_)
-    print('R^2: %.5f' % regr.score(X_regress, y_regress))
+    print("Average squared residual: %.5f"
+      % np.mean((regr.predict(X_regress) - y_regress) ** 2))
+    rss += np.sum((regr.predict(X_regress) - y_regress) ** 2)
     
+print("Overall:  %.5f" % (rss/1147))
+
+"""
+if len(keep) == 1 and i == 3:
+    pl.scatter(X_regress, y_regress,  color='black')
+    pl.plot(X_regress, regr.predict(X_regress), color='blue',
+            linewidth=3)
     
+    pl.xticks(())
+    pl.yticks(())
     
-    """
-    
-    display_set = [11]
-    y_plot = y_train[mask, np.newaxis]
-    X_plot = X_train[mask,:][:,display_set]
-    from pandas.tools.plotting import scatter_matrix
-    from pandas import DataFrame
-    df = DataFrame(np.concatenate((y_plot, X_plot), axis=1))
-    scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
-    """
+    pl.show()
+"""
+"""
+
+display_set = [11]
+y_plot = y_train[mask, np.newaxis]
+X_plot = X_train[mask,:][:,display_set]
+from pandas.tools.plotting import scatter_matrix
+from pandas import DataFrame
+df = DataFrame(np.concatenate((y_plot, X_plot), axis=1))
+scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
+"""
 
