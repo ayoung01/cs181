@@ -49,8 +49,9 @@ class LinearAll:
     """
 
     def __init__ (self, cv=20, scoring = 'mean_squared_error',
-                  n_jobs=-1, refit=False, iid=False):
-        self.__name__ = '__main__'
+                  n_jobs=1, refit=False, iid=False, pre_pred=True,
+                  param_ridge_post=list(np.arange(1,3,0.1))):
+        #self.__name__ = '__main__'
         """
         CAUTION: we changed to __main__ so that parallelization works
         """
@@ -59,7 +60,8 @@ class LinearAll:
         self.n_jobs = n_jobs
         self.refit = refit
         self.iid = iid
-
+        self.pre_pred =pre_pred
+        self.param_ridge_post = param_ridge_post
 
     def predict(self, X, y, param_ridge):
         """
@@ -73,17 +75,15 @@ class LinearAll:
         ##################################
         ## OLS CV
         ##################################
-        ols_cv = linear_model.LinearRegression(fit_intercept=True,
+        ols = linear_model.LinearRegression(fit_intercept=True,
                                                   normalize=False,
                                                   copy_X=True)
-        rss_ols_cv = cross_validation.cross_val_score(
-                ols_cv, X, y,
+        ols_cv_score = cross_validation.cross_val_score(
+                ols, X, y,
                 cv=self.cv, scoring=self.scoring,
                 n_jobs=self.n_jobs)
         """
-
-
-        self.rss_ols_cv.shape = (cv,)
+        self.ols_cv_score.shape = (cv,)
         """
 
         ##################################
@@ -109,7 +109,7 @@ class LinearAll:
                                      refit=self.refit, iid=self.iid)
         ridge_cv.fit(X, y)
 
-        return (rss_ols_cv, pls_cv, ridge_cv)
+        return (ols_cv_score, pls_cv, ridge_cv)
 
     def fit(self, X, y):
         """
@@ -152,10 +152,12 @@ class LinearAll:
         ##################################
         ## Pre Variable Selection Predictions
         ##################################
-        print "Computing ... "
-        param_ridge_pre = list(np.arange(1e9,2e9,1e8))
-        self.ols_pre, self.pls_pre, self.ridge_pre = \
-            self.predict(X, y, param_ridge_pre)
+        self.pre_pred = False
+        if self.pre_pred:
+            print "Computing ... "
+            param_ridge_pre = list(np.arange(1e9,2e9,1e8))
+            self.ols_pre, self.pls_pre, self.ridge_pre = \
+                self.predict(X, y, param_ridge_pre)
 
         ##################################
         ## Lasso Variable Selection
@@ -181,9 +183,8 @@ class LinearAll:
         ##################################
         ## Post Variable Selection Predictions
         ##################################
-        param_ridge_post = list(np.arange(1,3,0.1))
         self.ols_post, self.pls_post, self.ridge_post = \
-            self.predict(X_selected, y, param_ridge_post)
+            self.predict(X_selected, y, self.param_ridge_post)
 
 
         return self

@@ -17,7 +17,6 @@ X_train.shape = (1147, n_feaures)
 
 55-60 sentiments 0.28247*** 58 -> 0.16029 # number of negative [0] sentences in review
 
-61 np_release_dates
 12 running_time
 
 5 num_highest_grossing_actors
@@ -34,6 +33,9 @@ X_train.shape = (1147, n_feaures)
 9 oscar_winning_actors_present
 10 oscar_winning_directors_present
 
+
+
+61 np_release_dates
 15-36 genres
 37-49 companies
 50-54 ratings
@@ -41,9 +43,8 @@ observations:
 1. companies sharply divide high and low profile revenues
 """
 import pickle as pickle
-X_train_1, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', 'rb'))
-X_train_2 = np.load(open('feat.npy', 'rb'))
-X_train = np.concatenate((X_train_1, X_train_2), axis=1)
+discard, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', 'rb'))
+X_train = np.load(open('feat.npy', 'rb'))
 
 ##################################
 ##
@@ -55,6 +56,7 @@ imp = Imputer(missing_values= -1, strategy='mean', axis=0)
 X_train = imp.fit_transform(X_train)
 
 
+
 ##################################
 ##
 ## TRANSFORMATION
@@ -64,59 +66,23 @@ X_train = imp.fit_transform(X_train)
 # log y
 y_train = np.log(y_train)
 
-# production_budget trasnform by taking power
-POWER = [0.3]
-for power in POWER:
-    X_train = np.concatenate((X_train, X_train[:, 11][:, np.newaxis] ** power), axis=1)
 
-# number_of_screens
-POWER = [2]
-for power in POWER:
-    X_train = np.concatenate((X_train, X_train[:, 8][:, np.newaxis] ** power), axis=1)
 
 ##################################
 ##
 ## Basis Expansion
 ##
 ##################################
-# production_budget trasnform by taking power
-POWER = [-0.3, 0.1, 0.5, 1.5]
+# production_budget trasnform by taking power and log
+POWER = [0.3]
 for power in POWER:
     X_train = np.concatenate((X_train, X_train[:, 11][:, np.newaxis] ** power), axis=1)
 X_train = np.concatenate((X_train, np.log(X_train[:, 11][:, np.newaxis])), axis=1)
 
 # number_of_screens
-POWER = [-2, -1, 0.1, 0.5, 1.5]
+POWER = [2]
 for power in POWER:
     X_train = np.concatenate((X_train, X_train[:, 8][:, np.newaxis] ** power), axis=1)
-X_train = np.concatenate((X_train, np.log(X_train[:, 8][:, np.newaxis])), axis=1)
-
-#14 review word count
-POWER = [-2, -1, 0.1, 0.5, 2, 3]
-for power in POWER:
-    X_train = np.concatenate((X_train, X_train[:, 14][:, np.newaxis] ** power), axis=1)
-X_train = np.concatenate((X_train, np.log(X_train[:, 14][:, np.newaxis])), axis=1)
-
-#sentiments: avg, numpos, numneg
-POWER = [-8, -7, -5, -4, -3, -2, -1, -0.1 ,0.1, 0.5, 2, 3, 5, 7, 8, 9]
-for i in [55, 57, 58]:
-    for power in POWER:
-        X_train = np.concatenate((X_train, (X_train[:, i][:, np.newaxis] + 1) ** power), axis=1)
-    X_train = np.concatenate((X_train, np.log(X_train[:, i][:, np.newaxis] + 1)), axis=1)
-
-# running time
-POWER = [-2, -1, 0.1, 0.5, 2]
-for power in POWER:
-    X_train = np.concatenate((X_train, X_train[:, 12][:, np.newaxis] ** power), axis=1)
-X_train = np.concatenate((X_train, np.log(X_train[:, 12][:, np.newaxis])), axis=1)
-
-
-# np_release_dates
-POWER = [-2, -1, 0.1, 0.5, 2, 3]
-for power in POWER:
-    X_train = np.concatenate((X_train, (X_train[:, 61][:, np.newaxis] + 1) ** power), axis=1)
-X_train = np.concatenate((X_train, np.log(X_train[:, 61][:, np.newaxis] + 1)), axis=1)
-
 
 
 ##################################
@@ -124,93 +90,176 @@ X_train = np.concatenate((X_train, np.log(X_train[:, 61][:, np.newaxis] + 1)), a
 ## Segmentation
 ##
 ##################################
-low = 2
-high = 1000
-MASK = [X_train[:, 8] < low,
-        np.array([all(x) for x in zip(X_train[:,8]>low, X_train[:,8]<high)]),
-        X_train[:, 8] > high]
 
+l0 = 2
+l1 = 15
+l2 = 1500
 keep = np.arange(X_train.shape[1])
 
-mask = MASK[2]
-X = X_train[mask,:][:,keep]
-y = y_train[mask]
+MASK = [X_train[:, 8] < l0,
+        np.array([all(x) for x in zip(X_train[:,8]>l0, X_train[:,8]<l1)]),
+        np.array([all(x) for x in zip(X_train[:,8]>l1, X_train[:,8]<l2)]),
+        X_train[:, 8] > l2]
+mask = MASK[3]
 
-
-
+#mask = np.array([all(x) for x in zip(y_train>12, y_train<14)])
+#np.std(X_train[mask,:][:,8])
+##################################
+##
+## Visualization
+##
+##################################
+v_flag = False
+if v_flag:
+    X = X_train[mask,:][:,keep]
+    y = y_train[mask]
+    display_set = [8]
+    y_plot = y[:, np.newaxis]
+    X_plot = X[:,display_set]
+    from pandas.tools.plotting import scatter_matrix
+    from pandas import DataFrame
+    df = DataFrame(np.concatenate((y_plot, X_plot), axis=1))
+    scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
+    print X.shape[0]
 ##################################
 ##
 ## Regression
 ##
 ##################################
+# scoring
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import make_scorer
+def scoring_f(y, y_hat):
+     """
+     CAUTION: err must be a LOSS function, the higher the score the better
+     """
+     err = -1 * mean_absolute_error(np.exp(y), np.exp(y_hat))
+     #err = -1 * mean_squared_error(y, y_hat)
+     return err
+scorer = make_scorer(scoring_f, greater_is_better=True)
+"""
+CAUTION: greater_is_better=True => we are giving it a LOSS function
+"""
 
 
-import linearall
-models = linearall.LinearAll(cv=20, scoring = 'mean_squared_error',
-                  n_jobs=-1, refit=False, iid=False)
-models.fit(X, y)
+
+N_SEG = []
+MODEL = []
+for i, mask in enumerate(MASK):
+    X = X_train[mask,:][:,keep]
+    y = y_train[mask]
+    N_SEG.append(X.shape[0])
+    # parameters search range
+    param_ridge_post = list(np.arange(0.1,3,0.1))
+
+    # fit
+    import linearall
+    pre_pred = False
+    model = linearall.LinearAll(cv=20, scoring = scorer,
+                      n_jobs=-1, refit=False, iid=False, pre_pred=pre_pred,
+                      param_ridge_post=param_ridge_post)
+    model.fit(X, y)
+    MODEL.append(model)
+
+    # print for each segment
+    print "==================================================="
+    print "================= SEGMENT %d =====================" % i
+    print "==================================================="
+    print ("Train MSE(OLS):\t%.5f" % (model.rss_ols_train/X.shape[0]))
+
+
+    if pre_pred:
+        print "\n============ Pre Variable Selection ==============="
+        print "OLS\t%.5f +- %.5f" % (-np.mean(model.ols_pre), np.std(model.ols_pre))
+
+        #print("Grid scores on development set:")
+        #for params, mean_score, scores in models.pls_pre..grid_scores_:
+        #    print("%0.3f (+/-%0.03f) for %r"
+        #          % (mean_score, scores.std() / 2, params))
+        for params, mean_score, scores in model.pls_pre.grid_scores_:
+            if mean_score == model.pls_pre.best_score_:
+                print ("PLS\t%.5f +- %.5f for %s" %
+                    (-mean_score, scores.std(), params))
+
+        #print("Grid scores on development set:")
+        #for params, mean_score, scores in models.ridge_pre.grid_scores_:
+        #    print("%0.3f (+/-%0.03f) for %r"
+        #          % (mean_score, scores.std() / 2, params))
+        for params, mean_score, scores in model.ridge_pre.grid_scores_:
+            if mean_score == model.ridge_pre.best_score_:
+                print ("Ridge\t%.5f +- %.5f for %s" %
+                    (-mean_score, scores.std(), params))
+
+    print "\n============== Variable Selection =================="
+    print "Selected:\t%d/%d" % (np.sum(model.lasso_refit.coef_ != 0),X.shape[1])
+
+
+    print "\n============ Post Variable Selection ==============="
+    print "OLS\t%.5f +- %.5f" % (-np.mean(model.ols_post), np.std(model.ols_post))
+
+    #print("Grid scores on development set:")
+    #for params, mean_score, scores in models.pls_post.grid_scores_:
+    #    print("%0.3f (+/-%0.03f) for %r"
+    #          % (mean_score, scores.std() / 2, params))
+    for params, mean_score, scores in model.pls_post.grid_scores_:
+        if mean_score == model.pls_post.best_score_:
+            print ("PLS\t%.5f +- %.5f for %s" %
+                (-mean_score, scores.std(), params))
+
+    #print("Grid scores on development set:")
+    #for params, mean_score, scores in models.ridge_post.grid_scores_:
+    #    print("%0.3f (+/-%0.03f) for %r"
+    #          % (mean_score, scores.std() / 2, params))
+    for params, mean_score, scores in model.ridge_post.grid_scores_:
+        if mean_score == model.ridge_post.best_score_:
+            print ("Ridge\t%.5f +- %.5f for %s" %
+                (-mean_score, scores.std(), params))
 
 ##################################
 ##
-## Print shit
+## Print Summary
 ##
 ##################################
+n_all, p_all = X_train.shape
+
+ols_train_score = 0
+SELECTED = []
+ols_post_score = 0
+pls_post_score = 0
+ridge_post_score = 0
+for i, model in enumerate(MODEL):
+    ols_train_score += model.rss_ols_train
+    SELECTED.append(np.sum(model.lasso_refit.coef_ != 0))
+    ols_post_score += -np.mean(model.ols_post) * N_SEG[i]
+
+    for params, mean_score, scores in model.pls_post.grid_scores_:
+        if mean_score == model.pls_post.best_score_:
+            pls_post_score += -mean_score * N_SEG[i]
+
+    for params, mean_score, scores in model.ridge_post.grid_scores_:
+        if mean_score == model.ridge_post.best_score_:
+            ridge_post_score += -mean_score * N_SEG[i]
+
+ols_train_score /= n_all
+ols_post_score /= n_all
+pls_post_score /= n_all
+ridge_post_score /= n_all
+
+
+print "\n\n\n\n\n==================================================="
+print "=================== SUMMARY ======================="
 print "==================================================="
-print "===================== SUMMARY ====================="
-print "==================================================="
-print ("Train OLS:\t%.5f" % (models.rss_ols_train/X.shape[0]))
+print ("Train MSE(OLS):\t%.5f" % ols_train_score)
 
-print "\n============ Pre Variable Selection ==============="
-print "OLS:\t%.5f +- %.5f" % (-np.mean(models.ols_pre), np.std(models.ols_pre))
-
-#print("Grid scores on development set:")
-#for params, mean_score, scores in models.pls_pre..grid_scores_:
-#    print("%0.3f (+/-%0.03f) for %r"
-#          % (mean_score, scores.std() / 2, params))
-for params, mean_score, scores in models.pls_pre.grid_scores_:
-    if mean_score == models.pls_pre.best_score_:
-        print ("PLS\t%.5f +- %.5f for %s" %
-            (-mean_score, scores.std(), params))
-
-#print("Grid scores on development set:")
-#for params, mean_score, scores in models.ridge_pre.grid_scores_:
-#    print("%0.3f (+/-%0.03f) for %r"
-#          % (mean_score, scores.std() / 2, params))
-for params, mean_score, scores in models.ridge_pre.grid_scores_:
-    if mean_score == models.ridge_pre.best_score_:
-        print ("Ridge\t%.5f +- %.5f for %s" %
-            (-mean_score, scores.std(), params))
 
 print "\n============== Variable Selection =================="
-print "Selected:\t%d/%d" % (np.sum(models.lasso_refit.coef_ != 0),X.shape[1])
+for i, mask in enumerate(MASK):
+    print "Seg %d\tSelected:\t%d/%d" % (i, SELECTED[i], p_all)
 
 print "\n============ Post Variable Selection ==============="
-print "OLS:\t%.5f +- %.5f" % (-np.mean(models.ols_post), np.std(models.ols_post))
-
-#print("Grid scores on development set:")
-#for params, mean_score, scores in models.pls_post.grid_scores_:
-#    print("%0.3f (+/-%0.03f) for %r"
-#          % (mean_score, scores.std() / 2, params))
-for params, mean_score, scores in models.pls_post.grid_scores_:
-    if mean_score == models.pls_post.best_score_:
-        print ("PLS\t%.5f +- %.5f for %s" %
-            (-mean_score, scores.std(), params))
-
-#print("Grid scores on development set:")
-#for params, mean_score, scores in models.ridge_post.grid_scores_:
-#    print("%0.3f (+/-%0.03f) for %r"
-#          % (mean_score, scores.std() / 2, params))
-for params, mean_score, scores in models.ridge_post.grid_scores_:
-    if mean_score == models.ridge_post.best_score_:
-        print ("Ridge\t%.5f +- %.5f for %s" %
-            (-mean_score, scores.std(), params))
-
-
-
-
-
-
-
+print "OLS\t%.5f" % ols_post_score
+print "PLS\t%.5f" % pls_post_score
+print "Ridge\t%.5f" % ridge_post_score
 
 
 
@@ -350,4 +399,49 @@ for params, mean_score, scores in search.grid_scores_:
     if mean_score == search.best_score_:
         print ("Ridge Best: %.5f +- %.5f for %s" %
             (-mean_score, scores.std(), params))
+"""
+
+
+
+
+
+
+"""
+# production_budget trasnform by taking power
+POWER = [-0.3, 0.1, 0.5, 1.5]
+for power in POWER:
+    X_train = np.concatenate((X_train, X_train[:, 11][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 11][:, np.newaxis])), axis=1)
+
+# number_of_screens
+POWER = [-2, -1, 0.1, 0.5, 1.5]
+for power in POWER:
+    X_train = np.concatenate((X_train, X_train[:, 8][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 8][:, np.newaxis])), axis=1)
+
+#14 review word count
+POWER = [-2, -1, 0.1, 0.5, 2, 3]
+for power in POWER:
+    X_train = np.concatenate((X_train, X_train[:, 14][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 14][:, np.newaxis])), axis=1)
+
+#sentiments: avg, numpos, numneg
+POWER = [-8, -7, -5, -4, -3, -2, -1, -0.1 ,0.1, 0.5, 2, 3, 5, 7, 8, 9]
+for i in [55, 57, 58]:
+    for power in POWER:
+        X_train = np.concatenate((X_train, (X_train[:, i][:, np.newaxis] + 1) ** power), axis=1)
+    X_train = np.concatenate((X_train, np.log(X_train[:, i][:, np.newaxis] + 1)), axis=1)
+
+# running time
+POWER = [-2, -1, 0.1, 0.5, 2]
+for power in POWER:
+    X_train = np.concatenate((X_train, X_train[:, 12][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 12][:, np.newaxis])), axis=1)
+
+
+# np_release_dates
+POWER = [-2, -1, 0.1, 0.5, 2, 3]
+for power in POWER:
+    X_train = np.concatenate((X_train, (X_train[:, 61][:, np.newaxis] + 1) ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 61][:, np.newaxis] + 1)), axis=1)
 """
