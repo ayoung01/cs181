@@ -294,7 +294,9 @@ ffs = [feats]
 
 # extract features
 print "extracting training features..."
-X_train,y_train,train_ids = extract_feats(ffs, trainfile)
+#X_train,y_train,train_ids = extract_feats(ffs, trainfile)
+X_train,y_train,train_ids = extract_feats(ffs, testfile)
+
 
 print "done extracting training features"
 genres_uniq=[];origins_uniq=[];hi_actors_uniq=[];directors_uniq=[];
@@ -518,11 +520,11 @@ np_feat = np.concatenate((
             np.array(production_budget)[:, np.newaxis], #11
             np.array(running_time)[:, np.newaxis], #12
             np.array(summer)[:, np.newaxis], #13
-            X_wc, #14
+            #X_wc, #14
             np.array(genres_ind).T, #15-36
             np.array(companies_ind).T, #37-49
             g, pg, pg13, r, nc17, #50-54
-            X_sentiment, #55-60
+            #X_sentiment, #55-60
             np.array(release_dates)[:, np.newaxis], #61
             np.array(hi_actors_ind).T,
             np.array(origins_ind).T,
@@ -546,7 +548,7 @@ feat_indices = ['Christmas', 'Highest grossing actors present']\
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
 
 print "Dimensions of feature matrix: " + str(np_feat.shape)
-np.save(open('feat.npy', 'wb'), np_feat)
+np.save(open('feat_test.npy', 'wb'), np_feat)
 
 """
 # create inputs for Stanford NLP
