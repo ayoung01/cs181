@@ -353,8 +353,7 @@ for origin in origins_uniq_clean:
 # remove bizarre occurences of booleans in actor list
 for i, actor_list in enumerate(actors):
     if True == actor_list:
-        actors[i] = ''
-        
+        actors[i] = []
 # sort actors by number of movies in training set
 for actor in actors_uniq:
     ind = [int(actor in x) for x in actors]
@@ -365,13 +364,15 @@ for i, actor in enumerate(actors_uniq):
     actors_by_freq = sorted(actors_by_freq, reverse = True)
 actors_by_freq.pop(0) # Remove empty string from actor list
 actors_uniq_sorted = []
-# truncate by top 97 actors (>= 6 occurrences)
+# truncate by top 85 actors (>= 6 occurrences)
 for x, actor in actors_by_freq[:97]:
-    actors_uniq_sorted.append(actor)
+    if not actor.lower() in hi_actors_uniq: # avoid re-counting (removes 12 actors)
+        actors_uniq_sorted.append(actor)
 actors_ind=[]
 for actor in actors_uniq_sorted:
     actors_ind.append([int(actor in x) for x in actors])
-    
+num_actors = [len(actor_list) for actor_list in actors]
+
 # sort authors by number of movies in training set
 for author in authors_uniq:
     ind = [int(author in x) for x in authors]
@@ -380,7 +381,7 @@ authors_by_freq = []
 for i, author in enumerate(authors_uniq):
     authors_by_freq.append((sum(authors_ind[i]), author))
     authors_by_freq = sorted(authors_by_freq, reverse = True)
-actors_by_freq.pop(0) # Remove empty string from author list
+authors_by_freq.pop(0) # Remove empty string from author list
 authors_uniq_sorted = []
 # truncate by top 29 authors (>=3 occurrences)
 # 174 authors have >=2 occurrences
@@ -389,6 +390,7 @@ for x, author in authors_by_freq[:29]:
 authors_ind=[]
 for author in authors_uniq_sorted:
     authors_ind.append([int(author in x) for x in authors])
+num_authors = [len(author_list) for author_list in authors]
 
 np_feat = np.concatenate((g, pg, pg13, r, nc17,
             np.array(release_dates)[:, np.newaxis],
@@ -399,9 +401,11 @@ np_feat = np.concatenate((g, pg, pg13, r, nc17,
             np.array(origins_ind).T,
             np.array(directors_ind).T,
             np.array(actors_ind).T,
-            np.array(authors_ind).T), axis=1)
+            np.array(authors_ind).T, 
+            np.array(num_actors)[:, np.newaxis],
+            np.array(num_authors)[:, np.newaxis]), axis=1)
 
-feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq+actors_uniq_sorted+authors_uniq_sorted
+feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq+actors_uniq_sorted+authors_uniq_sorted+['Number of actors', 'Number of authors']
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
                           
 print "Dimensions of feature matrix: " + str(np_feat.shape)
