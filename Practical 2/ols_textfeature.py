@@ -231,21 +231,56 @@ def feats(md):
     d['director'] = md.__dict__['directors']
     d['actors'] = md.__dict__['actors']
     d['authors'] = md.__dict__['authors']
-    #d['production_budget'] = md.__dict__['production_budget']
-    #d['number_of_screens'] = md.__dict__['number_of_screens']
-    #d['running_time'] = md.__dict__['running_time']
-    #d['summer_release'] = md.__dict__['summer_release']
-    #d['christmas_release'] = md.__dict__['christmas_release']
-    #d['memorial_release'] = md.__dict__['memorial_release']
-    #d['independence_release'] = md.__dict__['independence_release']
-    #d['labor_release'] = md.__dict__['labor_release']
-    #
+
+    try: 
+        d['number_of_screens']  =   float(md.__dict__['number_of_screens'])  
+    except:
+        d['number_of_screens']  = -1
+    
     try:
+        d['production_budget']  =   float(md.__dict__['production_budget'])
+    except KeyError:
+        d['production_budget']  = -1
+        
+    try:
+        d['running_time']       =   float(md.__dict__['running_time'])
+    except KeyError:
+        d['running_time']       = -1
+        
+    d['summer_release']         =   float(md.__dict__['summer_release'])
+    d['christmas_release']      =   float(md.__dict__['christmas_release'])
+    d['memorial_release']       =   float(md.__dict__['memorial_release'])
+    d['independence_release']   =   float(md.__dict__['independence_release'])
+    d['labor_release']          =   float(md.__dict__['labor_release'])
+    
+    try:
+        d['highest_grossing_actors_present'] = \
+            float(md.__dict__['highest_grossing_actors_present'])
         d['num_highest_grossing_actors'] = md.__dict__['num_highest_grossing_actors']
         d['highest_grossing_actor'] = md.__dict__['highest_grossing_actor']
     except:
+        d['highest_grossing_actors_present']    = 0.0
         d['num_highest_grossing_actors'] = 0
         d['highest_grossing_actor'] = []
+    
+    try: 
+        d['oscar_winning_directors_present'] = \
+            float(md.__dict__['oscar_winning_directors_present'])
+        d['num_oscar_winning_directors']     = \
+            float(md.__dict__['num_oscar_winning_directors'])     
+    except KeyError:
+        d['oscar_winning_directors_present']    = 0.0
+        d['num_oscar_winning_directors']        = 0.0
+        
+    try: 
+        d['oscar_winning_actors_present'] = \
+            float(md.__dict__['oscar_winning_actors_present'])
+        d['num_oscar_winning_actors']     = \
+            float(md.__dict__['num_oscar_winning_actors'])     
+    except KeyError:
+        d['oscar_winning_actors_present']    = 0.0
+        d['num_oscar_winning_actors']        = 0.0
+        
     return d
 # We need to first get the highest grossing actors present; discard number of oscar-winning directors (always 1 or 0)
 # production budget has missing values
@@ -260,11 +295,16 @@ ffs = [feats]
 # extract features
 print "extracting training features..."
 X_train,y_train,train_ids = extract_feats(ffs, trainfile)
+
 print "done extracting training features"
 genres_uniq=[];origins_uniq=[];hi_actors_uniq=[];directors_uniq=[];
 actors_uniq=[];authors_uniq=[];
 genres=[];release_dates=[];hi_actors=[];num_hi_actors=[];origins=[];ratings=[];
-companies=[];directors=[];actors=[];authors=[];
+companies=[];directors=[];actors=[];authors=[];num_oscar_winning_actors=[];
+oscar_winning_actors_present=[];oscar_winning_directors_present=[];
+num_oscar_winning_directors=[];summer=[];christmas=[];memorial=[];
+independence=[];labor=[];num_screens=[];production_budget=[];running_time=[];
+hi_actors_present=[];
 
 for features in X_train:
     genres.append(features['genres'])
@@ -286,6 +326,20 @@ for features in X_train:
         pass
     authors.append(features['authors'])
     authors_uniq.extend(features['authors'])
+    num_oscar_winning_actors.append(features['num_oscar_winning_actors'])
+    oscar_winning_actors_present.append(features['oscar_winning_actors_present'])
+    oscar_winning_directors_present.append(features['oscar_winning_directors_present'])
+    num_oscar_winning_directors.append(features['num_oscar_winning_directors'])
+    summer.append(features['summer_release'])
+    christmas.append(features['christmas_release'])
+    memorial.append(features['memorial_release'])
+    independence.append(features['independence_release'])
+    labor.append(features['labor_release'])
+    num_screens.append(features['number_of_screens'])
+    production_budget.append(features['production_budget'])
+    running_time.append(features['running_time'])
+    hi_actors_present.append(features['highest_grossing_actors_present'])
+    
 genres_uniq = list(set(genres_uniq)); genres_uniq.pop(0) # gets rid of empty genre
 origins_uniq = list(set(origins_uniq))
 ratings_uniq = list(set(ratings))
@@ -342,6 +396,24 @@ for x, director in directors_by_freq[:10]:
 directors_ind=[]
 for director in directors_uniq_sorted:
     directors_ind.append([int(director in x) for x in directors])
+
+# text sentiment features
+avg, prop, pos, neg, posprop, negprop = \
+            pickle.load(open('avg_prop_pos_neg_posprop_negprop.pickle', 'rb'))
+avg = np.array(avg)[:, np.newaxis]
+prop = np.array(prop)[:, np.newaxis]
+pos = np.array(pos)[:, np.newaxis]
+neg = np.array(neg)[:, np.newaxis]
+posprop = np.array(posprop)[:, np.newaxis]
+negprop = np.array(negprop)[:, np.newaxis]
+X_sentiment = np.concatenate((avg, prop, pos, neg, posprop, negprop), axis=1)
+
+sentiment_indices = ['avg', 'prop','pos', 'neg','posprop','negprop']
+
+# review word count
+X_wc = pickle.load(open('wordcounts.pickle', 'rb'))
+X_wc = np.array(X_wc)[:, np.newaxis]
+
 
 """
 # parse origins (cleaned manually)
@@ -401,29 +473,76 @@ for author in authors_uniq_sorted:
     authors_ind.append([int(author in x) for x in authors])
 num_authors = [len(author_list) for author_list in authors]
 
-############################
-# Cheap hack to combine features
-basic_feats, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', 'rb'))
-############################
+"""
+8 number_of_screens
+11 production_budget
+
+14 review word count
+
+55-60 sentiments 0.28247*** 58 -> 0.16029 # number of negative [0] sentences in review
+
+12 running_time
+
+5 num_highest_grossing_actors
+6 num_oscar_winning_actors
+7 num_oscar_winning_directors
+
+0 christmas_release
+2 independence_release
+3 labor_release
+4 memorial_release
+13 summer_release
+
+1 highest_grossing_actors_present
+9 oscar_winning_actors_present
+10 oscar_winning_directors_present
+
+61 np_release_dates
+15-36 genres
+37-49 companies
+50-54 ratings
+"""
+
 np_feat = np.concatenate((
-            ####################################
-            basic_feats[:, range(0,15)],
-            basic_feats[:, range(55,61)],
-            ###################################
-            g, pg, pg13, r, nc17,
-            np.array(release_dates)[:, np.newaxis],
-            np.array(num_hi_actors)[:, np.newaxis],
+            np.array(christmas)[:, np.newaxis], #0
+            np.array(hi_actors_present)[:, np.newaxis], #1
+            np.array(independence)[:, np.newaxis], #2
+            np.array(labor)[:, np.newaxis], #3
+            np.array(memorial)[:, np.newaxis], #4
+            np.array(num_hi_actors)[:, np.newaxis], #5
+            np.array(num_oscar_winning_actors)[:, np.newaxis], #6
+            np.array(oscar_winning_directors_present)[:, np.newaxis], #7
+            np.array(num_screens)[:, np.newaxis], #8
+            np.array(oscar_winning_actors_present)[:, np.newaxis], #9
+            np.array(num_oscar_winning_directors)[:, np.newaxis], #10
+            np.array(production_budget)[:, np.newaxis], #11
+            np.array(running_time)[:, np.newaxis], #12
+            np.array(summer)[:, np.newaxis], #13
+            X_wc, #14
+            np.array(genres_ind).T, #15-36
+            np.array(companies_ind).T, #37-49
+            g, pg, pg13, r, nc17, #50-54
+            X_sentiment, #55-60
+            np.array(release_dates)[:, np.newaxis], #61
             np.array(hi_actors_ind).T,
-            np.array(genres_ind).T,
-            np.array(companies_ind).T,
             np.array(origins_ind).T,
             np.array(directors_ind).T,
             np.array(actors_ind).T,
             np.array(authors_ind).T,
             np.array(num_actors)[:, np.newaxis],
-            np.array(num_authors)[:, np.newaxis]), axis=1)
+            np.array(num_authors)[:, np.newaxis],
+            ), axis=1)
 
-feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq+actors_uniq_sorted+authors_uniq_sorted+['Number of actors', 'Number of authors']
+feat_indices = ['Christmas', 'Highest grossing actors present']\
+    +['Independence','Labor','Memorial','Number of highest grossing actors']\
+    +['Number of Oscar winning actors','Oscar winning directors present']\
+    +['Number of screens','Oscar winning actors present','Number of Oscar winning directors','Production budget']\
+    +['Running time','Summer','Average review word count']\
+    +genres_uniq+companies_uniq_sorted+['G','PG','PG-13','R','NC-17']\
+    +sentiment_indices+['Release date']\
+    +hi_actors_uniq+origins_uniq_clean+directors_uniq_sorted+actors_uniq_sorted\
+    +authors_uniq_sorted+['Number of actors','Number of authors']
+    
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
 
 print "Dimensions of feature matrix: " + str(np_feat.shape)
