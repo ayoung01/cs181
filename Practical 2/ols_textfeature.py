@@ -229,6 +229,8 @@ def feats(md):
     d['rating'] = md.__dict__['rating']
     d['company'] = md.__dict__['company']
     d['director'] = md.__dict__['directors']
+    d['actors'] = md.__dict__['actors']
+    d['authors'] = md.__dict__['authors']
     try:
         d['num_highest_grossing_actors'] = md.__dict__['num_highest_grossing_actors']
         d['highest_grossing_actor'] = md.__dict__['highest_grossing_actor']
@@ -250,9 +252,10 @@ ffs = [feats]
 print "extracting training features..."
 X_train,y_train,train_ids = extract_feats(ffs, trainfile)
 print "done extracting training features"
-genres_uniq = []; origins_uniq = []; hi_actors_uniq = []; directors_uniq = [];
-genres = []; release_dates = []; hi_actors = []; num_hi_actors = [];
-origins = []; ratings = []; companies = []; directors = [];
+genres_uniq=[];origins_uniq=[];hi_actors_uniq=[];directors_uniq=[];
+actors_uniq=[];authors_uniq=[];
+genres=[];release_dates=[];hi_actors=[];num_hi_actors=[];origins=[];ratings=[];
+companies=[];directors=[];actors=[];authors=[];
 
 for features in X_train:
     genres.append(features['genres'])
@@ -267,15 +270,24 @@ for features in X_train:
     hi_actors_uniq.extend(features['highest_grossing_actor'])
     directors.append(features['director'])
     directors_uniq.extend(features['director'])
-    
+    actors.append(features['actors'])
+    try:
+        actors_uniq.extend(features['actors'])
+    except:
+        pass
+    authors.append(features['authors'])
+    authors_uniq.extend(features['authors'])
 genres_uniq = list(set(genres_uniq)); genres_uniq.pop(0) # gets rid of empty genre
 origins_uniq = list(set(origins_uniq))
 ratings_uniq = list(set(ratings))
 companies_uniq = list(set(companies))
 hi_actors_uniq = list(set(hi_actors_uniq))
 directors_uniq = list(set(directors_uniq))
+actors_uniq = list(set(actors_uniq))
+authors_uniq = list(set(authors_uniq))
 
-genres_ind = []; companies_ind = []; hi_actors_ind = []; origins_ind = []; directors_ind = [];
+genres_ind=[];companies_ind=[];hi_actors_ind=[];origins_ind=[];
+directors_ind=[];actors_ind=[];authors_ind=[];
 
 # indicator arrays for ratings
 g = np.array([int(x=='G') for x in ratings])[:, np.newaxis]
@@ -315,12 +327,13 @@ for i, director in enumerate(directors_uniq):
     directors_by_freq.append((sum(directors_ind[i]), director))
     directors_by_freq = sorted(directors_by_freq, reverse = True)
 directors_uniq_sorted = []
-# truncate by top 40 directors
+# truncate by top 10 directors
 for x, director in directors_by_freq[:10]:
     directors_uniq_sorted.append(director)
 directors_ind=[]
 for director in directors_uniq_sorted:
     directors_ind.append([int(director in x) for x in directors])
+
 """
 # parse origins (cleaned manually)
 origins_uniq_clean = []
@@ -329,34 +342,67 @@ for origin in origins_uniq:
     origins_uniq_clean.extend(countries)
 origins_uniq_clean = list(set(origins_uniq_clean))
 """
-origins_uniq_clean = ['USA', 'UK', 'Canada', 'Brazil', 'HongKong', 'Italy', 'Ireland', 'Bhutan', 'SouthAfrica', 'Georgia', 'Thailand', 'Mongolia', 'France', 'Switzerland', 'Rico', 'Zealand', 'Peru', 'Norway', 'Argentina', 'Republic', 'Slovakia', 'Israel', 'Australia', 'Algeria', 'Singapore', 'Iceland', 'Kazakhstan', 'China', 'Ecuador', 'Chile', 'Belgium', 'Germany', 'Iraq', 'Philippines', 'Spain','Netherlands', 'Bosnia', 'Denmark', 'Turkey', 'Finland', 'Mali', 'Morocco', 'Korea', 'Luxembourg', 'Hungary', 'Croatia', 'Iran', 'Poland', 'Russia','Romania','Portugal', 'Mexico','Liechtenstein','India', 'Sweden', 'Czech', 'Austria', 'Greece', 'Japan']
+origins_uniq_clean = ['USA', 'UK', 'Canada', 'Brazil', 'HongKong', 'Italy', 'Ireland','SouthAfrica','Georgia','Thailand','France', 'Switzerland', 'Rico', 'Zealand','Norway', 'Argentina','Israel', 'Australia','Singapore', 'Iceland', 'Kazakhstan', 'China','Belgium', 'Germany','Spain','Netherlands', 'Bosnia', 'Denmark', 'Turkey', 'Finland','Korea', 'Luxembourg', 'Hungary', 'Croatia', 'Iran', 'Russia','Romania','Mexico','India', 'Sweden', 'Czech', 'Austria','Japan']
 
 for origin in origins_uniq_clean:
     origins_ind.append([int(origin in x) for x in origins])
 
 #for i, country in enumerate(origins_ind):
 #    print (origins_uniq_clean[i], sum(origins_ind[i])),
+
+# remove bizarre occurences of booleans in actor list
+for i, actor_list in enumerate(actors):
+    if True == actor_list:
+        actors[i] = ''
+        
+# sort actors by number of movies in training set
+for actor in actors_uniq:
+    ind = [int(actor in x) for x in actors]
+    actors_ind.append(ind)      
+actors_by_freq = []
+for i, actor in enumerate(actors_uniq):
+    actors_by_freq.append((sum(actors_ind[i]), actor))
+    actors_by_freq = sorted(actors_by_freq, reverse = True)
+actors_by_freq.pop(0) # Remove empty string from actor list
+actors_uniq_sorted = []
+# truncate by top 97 actors (>= 6 occurrences)
+for x, actor in actors_by_freq[:97]:
+    actors_uniq_sorted.append(actor)
+actors_ind=[]
+for actor in actors_uniq_sorted:
+    actors_ind.append([int(actor in x) for x in actors])
     
-np_ratings = np.concatenate((g, pg, pg13, r, nc17), axis=1)
-np_release_dates = np.array(release_dates)[:, np.newaxis]
-np_num_hi_actors = np.array(num_hi_actors)[:, np.newaxis]
-np_hi_actors = np.array(hi_actors_ind).T
-np_genres = np.array(genres_ind).T
-np_companies = np.array(companies_ind).T
-np_origins = np.array(origins_ind).T
-np_directors = np.array(directors_ind).T
+# sort authors by number of movies in training set
+for author in authors_uniq:
+    ind = [int(author in x) for x in authors]
+    authors_ind.append(ind)      
+authors_by_freq = []
+for i, author in enumerate(authors_uniq):
+    authors_by_freq.append((sum(authors_ind[i]), author))
+    authors_by_freq = sorted(authors_by_freq, reverse = True)
+actors_by_freq.pop(0) # Remove empty string from author list
+authors_uniq_sorted = []
+# truncate by top 29 authors (>=3 occurrences)
+# 174 authors have >=2 occurrences
+for x, author in authors_by_freq[:29]:
+    authors_uniq_sorted.append(author)
+authors_ind=[]
+for author in authors_uniq_sorted:
+    authors_ind.append([int(author in x) for x in authors])
 
-feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq
+np_feat = np.concatenate((g, pg, pg13, r, nc17,
+            np.array(release_dates)[:, np.newaxis],
+            np.array(num_hi_actors)[:, np.newaxis],
+            np.array(hi_actors_ind).T,
+            np.array(genres_ind).T,
+            np.array(companies_ind).T,
+            np.array(origins_ind).T,
+            np.array(directors_ind).T,
+            np.array(actors_ind).T,
+            np.array(authors_ind).T), axis=1)
+
+feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq+actors_uniq_sorted+authors_uniq_sorted
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
-
-
-#np_feat = np.concatenate((np_ratings,np_release_dates,np_num_hi_actors,
-#                          np_hi_actors,np_genres,np_companies,
-#                          np_origins,np_directors), axis = 1)
-                          
-np_feat = np.concatenate((np_release_dates,
-                          np_hi_actors,
-                          np_origins,np_directors), axis = 1)
                           
 print "Dimensions of feature matrix: " + str(np_feat.shape)
 np.save(open('feat.npy', 'wb'), np_feat)
