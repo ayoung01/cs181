@@ -231,6 +231,15 @@ def feats(md):
     d['director'] = md.__dict__['directors']
     d['actors'] = md.__dict__['actors']
     d['authors'] = md.__dict__['authors']
+    #d['production_budget'] = md.__dict__['production_budget']
+    #d['number_of_screens'] = md.__dict__['number_of_screens']
+    #d['running_time'] = md.__dict__['running_time']
+    #d['summer_release'] = md.__dict__['summer_release']
+    #d['christmas_release'] = md.__dict__['christmas_release']
+    #d['memorial_release'] = md.__dict__['memorial_release']
+    #d['independence_release'] = md.__dict__['independence_release']
+    #d['labor_release'] = md.__dict__['labor_release']
+    #
     try:
         d['num_highest_grossing_actors'] = md.__dict__['num_highest_grossing_actors']
         d['highest_grossing_actor'] = md.__dict__['highest_grossing_actor']
@@ -305,7 +314,7 @@ for genre in genres_uniq:
 # sort companies by number of movies in training set
 for company in companies_uniq:
     ind = [int(x==company) for x in companies]
-    companies_ind.append(ind)      
+    companies_ind.append(ind)
 companies_by_freq = []
 for i, company in enumerate(companies_uniq):
     companies_by_freq.append((sum(companies_ind[i]), company))
