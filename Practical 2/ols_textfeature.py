@@ -1,11 +1,11 @@
 ## This file provides starter code for extracting features from the xml files and
 ## for doing some learning.
 ##
-## The basic set-up: 
+## The basic set-up:
 ## ----------------
 ## main() will run code to extract features, learn, and make predictions.
-## 
-## extract_feats() is called by main(), and it will iterate through the 
+##
+## extract_feats() is called by main(), and it will iterate through the
 ## train/test xml files and extract each instance into a util.MovieData object.
 ## It will then use a series of "feature-functions" that you will write/modify
 ## in order to extract dictionaries of features from each util.MovieData object.
@@ -21,13 +21,13 @@
 ## --------------------
 ## "feature-functions" are functions that take a util.MovieData object representing
 ## a single movie, and return a dictionary mapping feature names to their respective
-## numeric values. 
+## numeric values.
 ## For instance, a simple feature-function might map a movie object to the
 ## dictionary {'company-Fox Searchlight Pictures': 1}. This is a boolean feature
 ## indicating whether the production company of this move is Fox Searchlight Pictures,
 ## but of course real-valued features can also be defined. Because this feature-function
 ## will be run over MovieData objects for each movie instance, we will have the (different)
-## feature values of this feature for each movie, and these values will make up 
+## feature values of this feature for each movie, and these values will make up
 ## one of the columns in our final design matrix.
 ## Of course, multiple features can be defined within a single dictionary, and in
 ## the end all the dictionaries returned by feature functions will be unioned
@@ -65,17 +65,17 @@ def extract_feats(ffs, datafile="train.xml", global_feat_dict=None):
       ffs are a list of feature-functions.
       datafile is an xml file (expected to be train.xml or testcases.xml).
       global_feat_dict is a dictionary mapping feature_names to column-numbers; it
-      should only be provided when extracting features from test data, so that 
+      should only be provided when extracting features from test data, so that
       the columns of the test matrix align correctly.
 
-    returns: 
+    returns:
       a sparse design matrix, a dict mapping features to column-numbers,
       a vector of target values, and a list of movie ids in order of their
       rows in the design matrix
     """
     fds = [] # list of feature dicts
     targets = []
-    ids = [] 
+    ids = []
     begin_tag = "<instance" # for finding instances in the xml file
     end_tag = "</instance>"
     in_instance = False
@@ -88,7 +88,7 @@ def extract_feats(ffs, datafile="train.xml", global_feat_dict=None):
         _ = f.readline()
         for line in f:
             if begin_tag in line:
-                if in_instance: 
+                if in_instance:
                     assert False  # cannot have nested instances
                 else:
                     curr_inst = [line]
@@ -100,7 +100,7 @@ def extract_feats(ffs, datafile="train.xml", global_feat_dict=None):
                 movie_data = util.MovieData(ET.fromstring("".join(curr_inst)))
                 rowfd = {}
                 # union the output of all the feature functions over this instance
-                
+
                 [rowfd.update(ff(movie_data)) for ff in ffs]
                 # add the final dictionary for this instance to our list
                 fds.append(rowfd)
@@ -123,12 +123,12 @@ def make_design_mat(fds, global_feat_dict=None):
     arguments:
       fds is a list of feature dicts (one for each row).
       global_feat_dict is a dictionary mapping feature_names to column-numbers; it
-      should only be provided when extracting features from test data, so that 
+      should only be provided when extracting features from test data, so that
       the columns of the test matrix align correctly.
-       
-    returns: 
+
+    returns:
         a sparse NxD design matrix, where N == len(fds) and D is the number of
-        the union of features defined in any of the fds 
+        the union of features defined in any of the fds
     """
     if global_feat_dict is None:
         all_feats = set()
@@ -136,10 +136,10 @@ def make_design_mat(fds, global_feat_dict=None):
         feat_dict = dict([(feat, i) for i, feat in enumerate(sorted(all_feats))])
     else:
         feat_dict = global_feat_dict
-        
+
     cols = []
     rows = []
-    data = []        
+    data = []
     for i in xrange(len(fds)):
         temp_cols = []
         temp_data = []
@@ -161,12 +161,12 @@ def make_design_mat(fds, global_feat_dict=None):
         rows.extend([i]*k)
 
     assert len(cols) == len(rows) and len(rows) == len(data)
-   
+
     X = sparse.csr_matrix((np.array(data),
                    (np.array(rows), np.array(cols))),
                    shape=(len(fds), len(feat_dict)))
     return X, feat_dict
-    
+
 
 ## Here are two example feature-functions. They each take in a util.MovieData
 ## object, and return a dictionary mapping feature-names to numeric values.
@@ -193,35 +193,35 @@ def feats(md):
       VA - Variety review text (string)
       VV - Village Voice review text (string)
     """
-    #try: 
+    #try:
     #    d['AC']  =   md.__dict__['AC']
     #except:
     #    d['AC']  = -1
-    #try: 
-    #    d['BO']  =   md.__dict__['BO']  
+    #try:
+    #    d['BO']  =   md.__dict__['BO']
     #except:
     #    d['BO']  = -1
-    #try: 
-    #    d['CL']  =   md.__dict__['CL']  
+    #try:
+    #    d['CL']  =   md.__dict__['CL']
     #except:
     #    d['CL']  = -1
-    #try: 
-    #    d['EW']  =   md.__dict__['EW']  
+    #try:
+    #    d['EW']  =   md.__dict__['EW']
     #except:
     #    d['EW']  = -1
-    #try: 
+    #try:
     #    d['NY']  =   md.__dict__['NY']
     #except:
     #    d['NY']  = -1
-    #try: 
-    #    d['VA']  =   md.__dict__['VA']  
+    #try:
+    #    d['VA']  =   md.__dict__['VA']
     #except:
-    #    d['VA']  = -1    
-    #try: 
+    #    d['VA']  = -1
+    #try:
     #    d['VV']  =   md.__dict__['VV']
     #except:
     #    d['VV']  = -1
-    
+
     # subtract to get baseline of zero
     d['release_date'] = parser.parse(md.__dict__['release_date']).toordinal() - 731953
     d['genres']  =   md.__dict__['genres']
@@ -240,7 +240,7 @@ def feats(md):
     return d
 # We need to first get the highest grossing actors present; discard number of oscar-winning directors (always 1 or 0)
 # production budget has missing values
-    
+
 ## The following function does the feature extraction, learning, and prediction
 trainfile = "train.xml"
 testfile = "testcases.xml"
@@ -305,7 +305,7 @@ for genre in genres_uniq:
 # sort companies by number of movies in training set
 for company in companies_uniq:
     ind = [int(x==company) for x in companies]
-    companies_ind.append(ind)      
+    companies_ind.append(ind)
 companies_by_freq = []
 for i, company in enumerate(companies_uniq):
     companies_by_freq.append((sum(companies_ind[i]), company))
@@ -321,7 +321,7 @@ for company in companies_uniq_sorted:
 # sort directors by number of movies in training set
 for director in directors_uniq:
     ind = [int(director in x) for x in directors]
-    directors_ind.append(ind)      
+    directors_ind.append(ind)
 directors_by_freq = []
 for i, director in enumerate(directors_uniq):
     directors_by_freq.append((sum(directors_ind[i]), director))
@@ -357,7 +357,7 @@ for i, actor_list in enumerate(actors):
 # sort actors by number of movies in training set
 for actor in actors_uniq:
     ind = [int(actor in x) for x in actors]
-    actors_ind.append(ind)      
+    actors_ind.append(ind)
 actors_by_freq = []
 for i, actor in enumerate(actors_uniq):
     actors_by_freq.append((sum(actors_ind[i]), actor))
@@ -376,7 +376,7 @@ num_actors = [len(actor_list) for actor_list in actors]
 # sort authors by number of movies in training set
 for author in authors_uniq:
     ind = [int(author in x) for x in authors]
-    authors_ind.append(ind)      
+    authors_ind.append(ind)
 authors_by_freq = []
 for i, author in enumerate(authors_uniq):
     authors_by_freq.append((sum(authors_ind[i]), author))
@@ -392,7 +392,16 @@ for author in authors_uniq_sorted:
     authors_ind.append([int(author in x) for x in authors])
 num_authors = [len(author_list) for author_list in authors]
 
-np_feat = np.concatenate((g, pg, pg13, r, nc17,
+############################
+# Cheap hack to combine features
+basic_feats, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', 'rb'))
+############################
+np_feat = np.concatenate((
+            ####################################
+            basic_feats[:, range(0,15)],
+            basic_feats[:, range(55,61)],
+            ###################################
+            g, pg, pg13, r, nc17,
             np.array(release_dates)[:, np.newaxis],
             np.array(num_hi_actors)[:, np.newaxis],
             np.array(hi_actors_ind).T,
@@ -401,13 +410,13 @@ np_feat = np.concatenate((g, pg, pg13, r, nc17,
             np.array(origins_ind).T,
             np.array(directors_ind).T,
             np.array(actors_ind).T,
-            np.array(authors_ind).T, 
+            np.array(authors_ind).T,
             np.array(num_actors)[:, np.newaxis],
             np.array(num_authors)[:, np.newaxis]), axis=1)
 
 feat_indices = ['G','PG','PG-13','R','NC-17', 'Release date','Number of highest grossing actors']+hi_actors_uniq+genres_uniq+companies_uniq_sorted+origins_uniq_clean+directors_uniq+actors_uniq_sorted+authors_uniq_sorted+['Number of actors', 'Number of authors']
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
-                          
+
 print "Dimensions of feature matrix: " + str(np_feat.shape)
 np.save(open('feat.npy', 'wb'), np_feat)
 
