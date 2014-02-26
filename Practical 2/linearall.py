@@ -134,11 +134,11 @@ class LinearAll:
         ##################################
         ## OLS Train
         ##################################
-        ols_train = linear_model.LinearRegression(fit_intercept=True,
-                                                  normalize=False,
-                                                  copy_X=True)
-        ols_train.fit(X, y)
-        self.rss_ols_train = np.sum((ols_train.predict(X) - y) ** 2)
+        #ols_train = linear_model.LinearRegression(fit_intercept=True,
+        #                                         normalize=False,
+        #                                          copy_X=True)
+        #ols_train.fit(X, y)
+        #self.rss_ols_train = np.sum((ols_train.predict(X) - y) ** 2)
         """
         fit_intercept=True, center the data
         copy=True, because centering data invovles X -= X_mean

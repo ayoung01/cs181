@@ -232,27 +232,27 @@ def feats(md):
     d['actors'] = md.__dict__['actors']
     d['authors'] = md.__dict__['authors']
 
-    try: 
-        d['number_of_screens']  =   float(md.__dict__['number_of_screens'])  
+    try:
+        d['number_of_screens']  =   float(md.__dict__['number_of_screens'])
     except:
         d['number_of_screens']  = -1
-    
+
     try:
         d['production_budget']  =   float(md.__dict__['production_budget'])
     except KeyError:
         d['production_budget']  = -1
-        
+
     try:
         d['running_time']       =   float(md.__dict__['running_time'])
     except KeyError:
         d['running_time']       = -1
-        
+
     d['summer_release']         =   float(md.__dict__['summer_release'])
     d['christmas_release']      =   float(md.__dict__['christmas_release'])
     d['memorial_release']       =   float(md.__dict__['memorial_release'])
     d['independence_release']   =   float(md.__dict__['independence_release'])
     d['labor_release']          =   float(md.__dict__['labor_release'])
-    
+
     try:
         d['highest_grossing_actors_present'] = \
             float(md.__dict__['highest_grossing_actors_present'])
@@ -262,25 +262,25 @@ def feats(md):
         d['highest_grossing_actors_present']    = 0.0
         d['num_highest_grossing_actors'] = 0
         d['highest_grossing_actor'] = []
-    
-    try: 
+
+    try:
         d['oscar_winning_directors_present'] = \
             float(md.__dict__['oscar_winning_directors_present'])
         d['num_oscar_winning_directors']     = \
-            float(md.__dict__['num_oscar_winning_directors'])     
+            float(md.__dict__['num_oscar_winning_directors'])
     except KeyError:
         d['oscar_winning_directors_present']    = 0.0
         d['num_oscar_winning_directors']        = 0.0
-        
-    try: 
+
+    try:
         d['oscar_winning_actors_present'] = \
             float(md.__dict__['oscar_winning_actors_present'])
         d['num_oscar_winning_actors']     = \
-            float(md.__dict__['num_oscar_winning_actors'])     
+            float(md.__dict__['num_oscar_winning_actors'])
     except KeyError:
         d['oscar_winning_actors_present']    = 0.0
         d['num_oscar_winning_actors']        = 0.0
-        
+
     return d
 # We need to first get the highest grossing actors present; discard number of oscar-winning directors (always 1 or 0)
 # production budget has missing values
@@ -295,7 +295,7 @@ ffs = [feats]
 # extract features
 print "extracting training features..."
 #X_train,y_train,train_ids = extract_feats(ffs, trainfile)
-X_train,y_train,train_ids = extract_feats(ffs, testfile)
+X_train,y_train,train_ids = extract_feats(ffs, trainfile)
 
 
 print "done extracting training features"
@@ -341,7 +341,7 @@ for features in X_train:
     production_budget.append(features['production_budget'])
     running_time.append(features['running_time'])
     hi_actors_present.append(features['highest_grossing_actors_present'])
-    
+
 genres_uniq = list(set(genres_uniq)); genres_uniq.pop(0) # gets rid of empty genre
 origins_uniq = list(set(origins_uniq))
 ratings_uniq = list(set(ratings))
@@ -520,11 +520,11 @@ np_feat = np.concatenate((
             np.array(production_budget)[:, np.newaxis], #11
             np.array(running_time)[:, np.newaxis], #12
             np.array(summer)[:, np.newaxis], #13
-            #X_wc, #14
+            X_wc, #14
             np.array(genres_ind).T, #15-36
             np.array(companies_ind).T, #37-49
             g, pg, pg13, r, nc17, #50-54
-            #X_sentiment, #55-60
+            X_sentiment, #55-60
             np.array(release_dates)[:, np.newaxis], #61
             np.array(hi_actors_ind).T,
             np.array(origins_ind).T,
@@ -544,11 +544,11 @@ feat_indices = ['Christmas', 'Highest grossing actors present']\
     +sentiment_indices+['Release date']\
     +hi_actors_uniq+origins_uniq_clean+directors_uniq_sorted+actors_uniq_sorted\
     +authors_uniq_sorted+['Number of actors','Number of authors']
-    
+
 np.save(open('feat_names.npy','wb'),np.array(feat_indices))
 
 print "Dimensions of feature matrix: " + str(np_feat.shape)
-np.save(open('feat_test.npy', 'wb'), np_feat)
+np.save(open('feat.npy', 'wb'), np_feat)
 
 """
 # create inputs for Stanford NLP
