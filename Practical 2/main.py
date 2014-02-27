@@ -5,10 +5,9 @@ Created on Sun Feb 23 14:47:08 2014
 @author: vincentli2010
 """
 """
-This is split
-"""
 
-#import util
+
+"""
 
 ##################################
 ##
@@ -358,22 +357,24 @@ print "OLS\t%.5f" % ols_post_score
 print "PLS\t%.5f" % pls_post_score
 print "Ridge\t%.5f" % ridge_post_score
 
-
-
+"""
+# Visualize train fit
 from pandas.tools.plotting import scatter_matrix
 from pandas import DataFrame
 df = DataFrame(np.concatenate((y_hat[:,np.newaxis], y_train[:,np.newaxis]), axis=1))
 scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
+"""
 
-
+# Output predictions
+y_out = np.exp(y_hat)
+import util
+test_ids = pickle.load(open('test_ids.p','rb'))
+util.write_predictions(y_out, test_ids, 'pred.csv')
 
 
 
 
 """
-mask = MASK[2]
-X_regress = X_train[mask,:][:,keep]
-y_regress = y_train[mask]
 
 ##################################
 ##
