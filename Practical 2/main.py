@@ -4,7 +4,9 @@ Created on Sun Feb 23 14:47:08 2014
 
 @author: vincentli2010
 """
-
+"""
+This is split
+"""
 
 #import util
 
@@ -14,7 +16,7 @@ Created on Sun Feb 23 14:47:08 2014
 ##
 ##################################
 """
-X_all.shape = (1147, n_feaures)
+X_train.shape = (1147, n_feaures)
 8 number_of_screens
 11 production_budget
 
@@ -48,15 +50,34 @@ observations:
 
 import numpy as np
 train_flag = True
-if train_flag:
-    import pickle
-    discard, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', 'rb'))
-    X_feat = np.load(open('feat.npy', 'rb'))
-    X_topic = np.load(open('/home/vincentli2010/Desktop/feat2.npy', 'rb'))
-    X_all = np.concatenate((X_feat, X_topic), axis=1)
-else:
-    X_all = np.load(open('feat_test.npy', 'rb'))
+import pickle
+discard, global_feat_dict, y_train, train_ids = pickle.load(open('features.p', 'rb'))
+#topic_idx = np.load(open('topic_idx.npy', 'rb'))
+#X_train = np.concatenate((np.load(open('feat.npy', 'rb')),
+#                        np.load(open('/home/vincentli2010/Desktop/feat3.npy', 'rb'))[:,topic_idx]),
+#                        axis=1)
+#X_train = np.load(open('feat.npy', 'rb'))
+#X_author = np.load(open('/home/vincentli2010/Desktop/feat4.npy', 'rb'))
+#X_train = np.concatenate((X_train, X_author), axis=1)
 
+#X = np.concatenate((np.load(open('feat.npy', 'rb')),
+#                    np.load(open('/home/vincentli2010/Desktop/feat2.npy'))),axis=1)
+#X_train = X
+#X_test = X
+
+"""
+main: 235282 5583528 2151493
+main + unigrams: 2054001
+main + author: 2239924
+main + all grams: 130301 6109536 2272703
+
+main + all gram for segment0 AND main for segment 1: 130301 5583528 2084459
+"""
+
+X_train = np.load(open('main_gram_filtered.npy', 'rb'))
+X_test = np.load(open('main_gram_filtered.npy', 'rb'))
+
+y_hat = np.empty((X_test.shape[0],))
 
 ##################################
 ##
@@ -64,8 +85,11 @@ else:
 ##
 ##################################
 from sklearn.preprocessing import Imputer
-imp = Imputer(missing_values= -1, strategy='mean', axis=0)
-X_all = imp.fit_transform(X_all)
+imp_train = Imputer(missing_values= -1, strategy='mean', axis=0)
+X_train = imp_train.fit_transform(X_train)
+
+imp_test = Imputer(missing_values= -1, strategy='mean', axis=0)
+X_test = imp_test.fit_transform(X_test)
 
 ##################################
 ##
@@ -77,17 +101,29 @@ if transform_flag:
     # log y
     y_train = np.log(y_train)
 
+
     # number_of_screens
     POWER = [2]
     for power in POWER:
-        X_all = np.concatenate((X_all, X_all[:, 8][:, np.newaxis] ** power), axis=1)
+        X_train = np.concatenate((X_train, X_train[:, 8][:, np.newaxis] ** power), axis=1)
 
     # production_budget trasnform by taking power and log
     POWER = [0.3]
     for power in POWER:
-        X_all = np.concatenate((X_all, X_all[:, 11][:, np.newaxis] ** power), axis=1)
-    X_all = np.concatenate((X_all, np.log(X_all[:, 11][:, np.newaxis])), axis=1)
+        X_train = np.concatenate((X_train, X_train[:, 11][:, np.newaxis] ** power), axis=1)
+    X_train = np.concatenate((X_train, np.log(X_train[:, 11][:, np.newaxis])), axis=1)
 
+
+    # number_of_screens
+    POWER = [2]
+    for power in POWER:
+        X_test = np.concatenate((X_test, X_test[:, 8][:, np.newaxis] ** power), axis=1)
+
+    # production_budget trasnform by taking power and log
+    POWER = [0.3]
+    for power in POWER:
+        X_test = np.concatenate((X_test, X_test[:, 11][:, np.newaxis] ** power), axis=1)
+    X_test = np.concatenate((X_test, np.log(X_test[:, 11][:, np.newaxis])), axis=1)
 
 ##################################
 ##
@@ -96,7 +132,7 @@ if transform_flag:
 ##################################
 per_screen_flag = False
 if per_screen_flag:
-    y_train = np.array([float(y)/float(X_all[i,8]) for i, y in enumerate(y_train)])
+    y_train = np.array([float(y)/float(X_train[i,8]) for i, y in enumerate(y_train)])
     y_train = np.log(y_train)
 
 ##################################
@@ -105,37 +141,43 @@ if per_screen_flag:
 ##
 ##################################
 seg_flag = True
-keep = np.arange(X_all.shape[1])
 if seg_flag:
-    l0 = 1000 #2154673 @ (1000)
-    MASK = [X_all[:, 8] < l0,
-            X_all[:, 8] > l0]
+    l0 = 1000 #2151493 @ (1000)
+    MASK = [X_train[:, 8] < l0,
+            X_train[:, 8] > l0]
     for i, mask in enumerate(MASK):
-        print "Segment %d\t%d" % (i, np.sum(mask!=0))
+        print "Train Segment %d\t%d" % (i, np.sum(mask!=0))
+
+    print
+    MASK_TEST = [X_test[:, 8] < l0,
+                 X_test[:, 8] > l0]
+    for i, mask in enumerate(MASK_TEST):
+        print "Test Segment %d\t%d" % (i, np.sum(mask!=0))
     """
-    MASK = [X_all[:, 8] > 0] #3937835
+    MASK = [X_train[:, 8] > 0] #3937835
 
     l0 = 5 #2098825 @ (5, 1000)
     l1 = 1000
-    keep = np.arange(X_all.shape[1])
+    keep = np.arange(X_train.shape[1])
 
-    MASK = [X_all[:, 8] < l0,
-            np.array([all(x) for x in zip(X_all[:,8]>l0, X_all[:,8]<l1)]),
-            X_all[:, 8] > l1]
+    MASK = [X_train[:, 8] < l0,
+            np.array([all(x) for x in zip(X_train[:,8]>l0, X_train[:,8]<l1)]),
+            X_train[:, 8] > l1]
 
     l0 = 2 #2097856 @ (2, 10, 1000)
     l1 = 10
     l2 = 1000
-    keep = np.arange(X_all.shape[1])
+    keep = np.arange(X_train.shape[1])
 
-    MASK = [X_all[:, 8] < l0,
-            np.array([all(x) for x in zip(X_all[:,8]>l0, X_all[:,8]<l1)]),
-            np.array([all(x) for x in zip(X_all[:,8]>l1, X_all[:,8]<l2)]),
-            X_all[:, 8] > l2]
+    MASK = [X_train[:, 8] < l0,
+            np.array([all(x) for x in zip(X_train[:,8]>l0, X_train[:,8]<l1)]),
+            np.array([all(x) for x in zip(X_train[:,8]>l1, X_train[:,8]<l2)]),
+            X_train[:, 8] > l2]
 
     """
 else:
-    MASK = [np.array([True] * X_all.shape[0])]
+    MASK = [np.array([True] * X_train.shape[0])]
+    MASK_TEST = [np.array([True] * X_test.shape[0])]
 ##################################
 ##
 ## Visualization
@@ -149,7 +191,7 @@ if v_flag:
     display_set =[87]
     mask = MASK[1]
 
-    X = X_all[mask,:][:,keep]
+    X = X_train[mask,:]
     X_plot = X[:,display_set]
 
 
@@ -190,23 +232,30 @@ if not warning_show:
 N_SEG = []
 MODEL = []
 for i, mask in enumerate(MASK):
-    X = X_all[mask,:][:,keep]
+    X = X_train[mask,:]
     y = y_train[mask]
-    N_SEG.append(X.shape[0])
-    # parameters search range
-    #param_ridge_post = list(np.arange(200,400,10))
-    #param_ridge_post.append(0.5)
-    #param_ridge_post= list(np.arange(0.1,3,0.1))
-    param_ridge_post = [0.5, 330] #p=24489 => optimal: 330 and 0.5
+    X_test_masked = X_test[MASK_TEST[i],:]
 
+    N_SEG.append(X.shape[0])
+
+    if i == 1:
+        X = X_train[mask,:][:, range(0, 300) + [501, 502, 503]]
+        X_test_masked = X_test[MASK_TEST[i],:][:, range(0, 300) + [501, 502, 503]]
+
+    # parameters search range
+    param_ridge_post= np.concatenate((np.arange(0.1,1,0.1),np.arange(3,5,0.1)))
+    #param_ridge_post = [330, 0.5] #p=24489
+    #param_ridge_post = [3.7, 0.5] #p=303 2151493.01295
 
     # fit
     import linearall
     pre_pred = False
     model = linearall.LinearAll(cv=5, scoring = scorer,
-                      n_jobs=-1, refit=False, iid=False, pre_pred=pre_pred,
+                      n_jobs=-1, refit=True, iid=False, pre_pred=pre_pred,
                       param_ridge_post=param_ridge_post)
     model.fit(X, y)
+    y_hat[MASK_TEST[i]] = model.predict(X_test_masked).flatten()
+
     MODEL.append(model)
 
     # print for each segment
@@ -266,7 +315,7 @@ for i, mask in enumerate(MASK):
 ## Print Summary
 ##
 ##################################
-n_all, p_all = X_all.shape
+n_all, p_all = X_train.shape
 
 ols_train_score = 0
 SELECTED_COEF = []
@@ -311,9 +360,19 @@ print "Ridge\t%.5f" % ridge_post_score
 
 
 
+from pandas.tools.plotting import scatter_matrix
+from pandas import DataFrame
+df = DataFrame(np.concatenate((y_hat[:,np.newaxis], y_train[:,np.newaxis]), axis=1))
+scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
+
+
+
+
+
+
 """
 mask = MASK[2]
-X_regress = X_all[mask,:][:,keep]
+X_regress = X_train[mask,:][:,keep]
 y_regress = y_train[mask]
 
 ##################################
@@ -326,7 +385,7 @@ y_regress = y_train[mask]
 rss = 0
 for i in range(len(MASK)):
     mask = MASK[i]
-    X_regress = X_all[mask,:][:,keep]
+    X_regress = X_train[mask,:][:,keep]
     y_regress = y_train[mask]
 
     from sklearn import linear_model
@@ -466,38 +525,38 @@ for params, mean_score, scores in search.grid_scores_:
 # production_budget trasnform by taking power
 POWER = [-0.3, 0.1, 0.5, 1.5]
 for power in POWER:
-    X_all = np.concatenate((X_all, X_all[:, 11][:, np.newaxis] ** power), axis=1)
-X_all = np.concatenate((X_all, np.log(X_all[:, 11][:, np.newaxis])), axis=1)
+    X_train = np.concatenate((X_train, X_train[:, 11][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 11][:, np.newaxis])), axis=1)
 
 # number_of_screens
 POWER = [-2, -1, 0.1, 0.5, 1.5]
 for power in POWER:
-    X_all = np.concatenate((X_all, X_all[:, 8][:, np.newaxis] ** power), axis=1)
-X_all = np.concatenate((X_all, np.log(X_all[:, 8][:, np.newaxis])), axis=1)
+    X_train = np.concatenate((X_train, X_train[:, 8][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 8][:, np.newaxis])), axis=1)
 
 #14 review word count
 POWER = [-2, -1, 0.1, 0.5, 2, 3]
 for power in POWER:
-    X_all = np.concatenate((X_all, X_all[:, 14][:, np.newaxis] ** power), axis=1)
-X_all = np.concatenate((X_all, np.log(X_all[:, 14][:, np.newaxis])), axis=1)
+    X_train = np.concatenate((X_train, X_train[:, 14][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 14][:, np.newaxis])), axis=1)
 
 #sentiments: avg, numpos, numneg
 POWER = [-8, -7, -5, -4, -3, -2, -1, -0.1 ,0.1, 0.5, 2, 3, 5, 7, 8, 9]
 for i in [55, 57, 58]:
     for power in POWER:
-        X_all = np.concatenate((X_all, (X_all[:, i][:, np.newaxis] + 1) ** power), axis=1)
-    X_all = np.concatenate((X_all, np.log(X_all[:, i][:, np.newaxis] + 1)), axis=1)
+        X_train = np.concatenate((X_train, (X_train[:, i][:, np.newaxis] + 1) ** power), axis=1)
+    X_train = np.concatenate((X_train, np.log(X_train[:, i][:, np.newaxis] + 1)), axis=1)
 
 # running time
 POWER = [-2, -1, 0.1, 0.5, 2]
 for power in POWER:
-    X_all = np.concatenate((X_all, X_all[:, 12][:, np.newaxis] ** power), axis=1)
-X_all = np.concatenate((X_all, np.log(X_all[:, 12][:, np.newaxis])), axis=1)
+    X_train = np.concatenate((X_train, X_train[:, 12][:, np.newaxis] ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 12][:, np.newaxis])), axis=1)
 
 
 # np_release_dates
 POWER = [-2, -1, 0.1, 0.5, 2, 3]
 for power in POWER:
-    X_all = np.concatenate((X_all, (X_all[:, 61][:, np.newaxis] + 1) ** power), axis=1)
-X_all = np.concatenate((X_all, np.log(X_all[:, 61][:, np.newaxis] + 1)), axis=1)
+    X_train = np.concatenate((X_train, (X_train[:, 61][:, np.newaxis] + 1) ** power), axis=1)
+X_train = np.concatenate((X_train, np.log(X_train[:, 61][:, np.newaxis] + 1)), axis=1)
 """
