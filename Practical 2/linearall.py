@@ -11,8 +11,7 @@ from sklearn import linear_model
 from sklearn import cross_validation
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_decomposition import PLSRegression
-from sklearn.linear_model import LassoLarsCV
-
+from sklearn.linear_model import (LassoLarsCV, RandomizedLasso)
 
 
 class LinearAll:
@@ -50,7 +49,8 @@ class LinearAll:
 
     def __init__ (self, cv=20, scoring = 'mean_squared_error',
                   n_jobs=1, refit=False, iid=False, pre_pred=True,
-                  param_ridge_post=list(np.arange(1,3,0.1))):
+                  param_ridge_post=list(np.arange(1,3,0.1)),
+                    rlasso_selection_threshold = 0.5):
         #self.__name__ = '__main__'
         """
         CAUTION: we changed to __main__ so that parallelization works
@@ -62,6 +62,7 @@ class LinearAll:
         self.iid = iid
         self.pre_pred =pre_pred
         self.param_ridge_post = param_ridge_post
+        self.rlasso_selection_threshold = rlasso_selection_threshold
 
     def run_models(self, X, y, param_ridge):
         """
@@ -75,13 +76,13 @@ class LinearAll:
         ##################################
         ## OLS CV
         ##################################
-        ols = linear_model.LinearRegression(fit_intercept=True,
-                                                  normalize=False,
-                                                  copy_X=True)
-        ols_cv_score = cross_validation.cross_val_score(
-                ols, X, y,
-                cv=self.cv, scoring=self.scoring,
-                n_jobs=self.n_jobs)
+        #ols = linear_model.LinearRegression(fit_intercept=True,
+        #                                          normalize=False,
+        #                                          copy_X=True)
+        #ols_cv_score = cross_validation.cross_val_score(
+        #        ols, X, y,
+        #        cv=self.cv, scoring=self.scoring,
+        #        n_jobs=self.n_jobs)
         """
         self.ols_cv_score.shape = (cv,)
         """
@@ -89,7 +90,7 @@ class LinearAll:
         ##################################
         ## PLS CV
         ##################################
-        tuned_parameters = [{'n_components': range(1, 15)}]
+        tuned_parameters = [{'n_components': range(1, 5)}]
         pls = PLSRegression()
         pls_cv = GridSearchCV(pls, tuned_parameters,
                                 cv=self.cv, scoring=self.scoring,
@@ -109,7 +110,7 @@ class LinearAll:
                                      refit=self.refit, iid=self.iid)
         ridge_cv.fit(X, y)
 
-        return (ols_cv_score, pls_cv, ridge_cv)
+        return (pls_cv, ridge_cv)
 
     def fit(self, X, y):
         """
@@ -156,7 +157,7 @@ class LinearAll:
         if self.pre_pred:
             print "Computing ... "
             param_ridge_pre = list(np.arange(1e9,2e9,1e8))
-            self.ols_pre, self.pls_pre, self.ridge_pre = \
+            self.pls_pre, self.ridge_pre = \
                 self.run_models(X, y, param_ridge_pre)
 
         ##################################
@@ -171,20 +172,30 @@ class LinearAll:
         normalize=True, lasso seems to be able to handle itself
         """
 
-        self.lasso_refit = linear_model.LassoLars(alpha=self.lasso_cv.alpha_,
-                            fit_intercept=True, normalize=True, precompute='auto',
-                            max_iter=X.shape[1]+1000,
-                            eps=2.2204460492503131e-16, copy_X=True,
-                            fit_path=False)
-        self.lasso_refit.fit(X, y)
-        self.active = self.lasso_refit.coef_ != 0
-        self.active = self.active[0,:]
-        X_selected = X[:, self.active]
+        if self.rlasso_selection_threshold == 0:
+            self.lasso_refit = linear_model.LassoLars(alpha=self.lasso_cv.alpha_,
+                                fit_intercept=True, normalize=True, precompute='auto',
+                                max_iter=X.shape[1]+1000,
+                                eps=2.2204460492503131e-16, copy_X=True,
+                                fit_path=False)
+            self.lasso_refit.fit(X, y)
+            self.active = self.lasso_refit.coef_ != 0
+            self.active = self.active[0,:]
+            X_selected = X[:, self.active]
+        else:
+            self.rlasso = RandomizedLasso(alpha=self.lasso_cv.alpha_, scaling=0.5,
+                                          sample_fraction=0.75, n_resampling=200,
+                                          selection_threshold=self.rlasso_selection_threshold, fit_intercept=True,
+                                          verbose=False, normalize=True, precompute='auto',
+                                          max_iter=500, eps=2.2204460492503131e-16,
+                                          random_state=None, n_jobs=self.n_jobs, pre_dispatch='3*n_jobs',)
+            self.rlasso.fit(X, y)
+            X_selected = self.rlasso.transform(X)
 
         ##################################
         ## Post Variable Selection Predictions
         ##################################
-        self.ols_post, self.pls_post, self.ridge_post = \
+        self.pls_post, self.ridge_post = \
             self.run_models(X_selected, y, self.param_ridge_post)
 
 
@@ -198,8 +209,11 @@ class LinearAll:
         else:
             self.best_model = self.ridge_post
             print "Chosen Model: ridge"
-        X_test_selected = X_test[:, self.active]
 
+        if self.rlasso_selection_threshold == 0:
+            X_test_selected = X_test[:, self.active]
+        else:
+            X_test_selected = self.rlasso.transform(X_test)
         return self.best_model.best_estimator_.predict(X_test_selected)
 
 
