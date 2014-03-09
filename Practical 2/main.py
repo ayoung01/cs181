@@ -110,18 +110,22 @@ _, _, y_train, _ = pickle.load(open('features.p', 'rb'))
 #X_train_grams = np.load(open('/home/vincentli2010/Desktop/train_grams.npy', 'rb'))
 #X_train = np.concatenate((X_train_main, X_train_grams), axis=1)
 X_train = np.load(open('train_joshi.npy', 'rb'))
-
+#screen = np.sum(X_train,axis=0) > 10
+#X_train = X_train[:, screen]
 #X_test = np.load(open('/home/vincentli2010/Desktop/test_main.npy', 'rb'))
 #X_test_grams = np.load(open('/home/vincentli2010/Desktop/test_grams.npy', 'rb'))
 #X_test = np.concatenate((X_test_main, X_test_grams), axis=1)
 X_test = np.load(open('test_joshi.npy', 'rb'))
+#X_test = X_test[:, screen]
+
 y_hat = np.empty((X_test.shape[0],))
 
 n_jobs = -1
 param_ridge_post= np.concatenate((#np.arange(0.01,0.1,0.01),
                                   np.arange(0.1,1,0.1),
-                                  np.arange(1,5,1),))
+                                  np.arange(1,10,1),))
 rlasso_selection_threshold = 0
+outfile = 'pred_joshi_cv20.csv'
 ##################################
 ##
 ## IMPUTATION
@@ -175,7 +179,7 @@ if transform_flag:
 ##################################
 per_screen_flag = False
 if per_screen_flag:
-    y_train = np.array([float(y)/float(X_train[i,8]) for i, y in enumerate(y_train)])
+    y_train = np.array([float(y)/float(X_train[i, 8]) for i, y in enumerate(y_train)])
     y_train = np.log(y_train)
 
 ##################################
@@ -204,7 +208,7 @@ if seg_flag:
     keep = np.arange(X_train.shape[1])
 
     MASK = [X_train[:, 8] < l0,
-            np.array([all(x) for x in zip(X_train[:,8]>l0, X_train[:,8]<l1)]),
+            np.array([all(x) for x in zip(X_train[:, 8]>l0, X_train[:, 8]<l1)]),
             X_train[:, 8] > l1]
 
     l0 = 2 #2097856 @ (2, 10, 1000)
@@ -213,8 +217,8 @@ if seg_flag:
     keep = np.arange(X_train.shape[1])
 
     MASK = [X_train[:, 8] < l0,
-            np.array([all(x) for x in zip(X_train[:,8]>l0, X_train[:,8]<l1)]),
-            np.array([all(x) for x in zip(X_train[:,8]>l1, X_train[:,8]<l2)]),
+            np.array([all(x) for x in zip(X_train[:, 8]>l0, X_train[:, 8]<l1)]),
+            np.array([all(x) for x in zip(X_train[:, 8]>l1, X_train[:, 8]<l2)]),
             X_train[:, 8] > l2]
 
     """
@@ -296,7 +300,7 @@ for i, mask in enumerate(MASK):
     # fit
     import linearall
     pre_pred = False
-    model = linearall.LinearAll(cv=5, scoring = scorer,
+    model = linearall.LinearAll(cv=20, scoring = scorer,
                       n_jobs=n_jobs, refit=True, iid=False, pre_pred=pre_pred,
                       param_ridge_post=param_ridge_post,
                       rlasso_selection_threshold = rlasso_selection_threshold)
@@ -424,7 +428,8 @@ print mean_absolute_error(np.exp(y_test), np.exp(y_hat))
 y_out = np.exp(y_hat)
 import util
 test_ids = pickle.load(open('test_ids.p','rb'))
-util.write_predictions(y_out, test_ids, 'pred_joshi_rand0.4.csv')
+util.write_predictions(y_out, test_ids, outfile)
+
 
 
 
@@ -597,7 +602,7 @@ for power in POWER:
 X_train = np.concatenate((X_train, np.log(X_train[:, 14][:, np.newaxis])), axis=1)
 
 #sentiments: avg, numpos, numneg
-POWER = [-8, -7, -5, -4, -3, -2, -1, -0.1 ,0.1, 0.5, 2, 3, 5, 7, 8, 9]
+POWER = [-8, -7, -5, -4, -3, -2, -1, -0.1 ,0.1, 0.5, 2, 3, 5, 8, 8, 9]
 for i in [55, 57, 58]:
     for power in POWER:
         X_train = np.concatenate((X_train, (X_train[:, i][:, np.newaxis] + 1) ** power), axis=1)
