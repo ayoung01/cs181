@@ -63,7 +63,7 @@ class LinearAll:
         self.pre_pred =pre_pred
         self.param_ridge_post = param_ridge_post
 
-    def predict(self, X, y, param_ridge):
+    def run_models(self, X, y, param_ridge):
         """
 
         Prediction Models.
@@ -89,7 +89,7 @@ class LinearAll:
         ##################################
         ## PLS CV
         ##################################
-        tuned_parameters = [{'n_components': range(1, 20)}]
+        tuned_parameters = [{'n_components': range(1, 15)}]
         pls = PLSRegression()
         pls_cv = GridSearchCV(pls, tuned_parameters,
                                 cv=self.cv, scoring=self.scoring,
@@ -134,11 +134,11 @@ class LinearAll:
         ##################################
         ## OLS Train
         ##################################
-        ols_train = linear_model.LinearRegression(fit_intercept=True,
-                                                  normalize=False,
-                                                  copy_X=True)
-        ols_train.fit(X, y)
-        self.rss_ols_train = np.sum((ols_train.predict(X) - y) ** 2)
+        #ols_train = linear_model.LinearRegression(fit_intercept=True,
+        #                                         normalize=False,
+        #                                          copy_X=True)
+        #ols_train.fit(X, y)
+        #self.rss_ols_train = np.sum((ols_train.predict(X) - y) ** 2)
         """
         fit_intercept=True, center the data
         copy=True, because centering data invovles X -= X_mean
@@ -157,7 +157,7 @@ class LinearAll:
             print "Computing ... "
             param_ridge_pre = list(np.arange(1e9,2e9,1e8))
             self.ols_pre, self.pls_pre, self.ridge_pre = \
-                self.predict(X, y, param_ridge_pre)
+                self.run_models(X, y, param_ridge_pre)
 
         ##################################
         ## Lasso Variable Selection
@@ -177,18 +177,30 @@ class LinearAll:
                             eps=2.2204460492503131e-16, copy_X=True,
                             fit_path=False)
         self.lasso_refit.fit(X, y)
-        active = self.lasso_refit.coef_ != 0
-        X_selected = X[:, active[0,:]]
+        self.active = self.lasso_refit.coef_ != 0
+        self.active = self.active[0,:]
+        X_selected = X[:, self.active]
 
         ##################################
         ## Post Variable Selection Predictions
         ##################################
         self.ols_post, self.pls_post, self.ridge_post = \
-            self.predict(X_selected, y, self.param_ridge_post)
+            self.run_models(X_selected, y, self.param_ridge_post)
 
 
         return self
 
+    def predict(self, X_test):
+        assert(self.refit == True)
+        if self.pls_post.best_score_ > self.ridge_post.best_score_:
+            self.best_model = self.pls_post
+            print "Chosen Model: pls"
+        else:
+            self.best_model = self.ridge_post
+            print "Chosen Model: ridge"
+        X_test_selected = X_test[:, self.active]
+
+        return self.best_model.best_estimator_.predict(X_test_selected)
 
 
 
