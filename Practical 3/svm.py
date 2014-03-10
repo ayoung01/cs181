@@ -6,11 +6,10 @@ Created on Sun Mar  9 20:23:44 2014
 """
 
 import numpy as np
-import pylab as pl
 
 from sklearn.preprocessing import StandardScaler
 
-X = np.load(open('x_train2', 'rb'))
+X = np.load(open('x_train3', 'rb'))
 y = np.array(np.load(open('y_train', 'rb'))).flatten()
 
 
@@ -21,45 +20,36 @@ X = StandardScaler().fit_transform(X)
 X_train, X_test = X[:2468], X[2468:]
 y_train, y_test = y[:2468], y[2468:]
 
-from sklearn import ensemble
+# rbf C=100 gamma=0.005    0.886731391586
+# poly C=20 degree=1   0.867313915858
+# poly C=50 degree=2   0.888349514563
+# poly C=50 degree=3   0.888349514563
+# poly C=40 degree=4   0.888349514563
 
-original_params = {'n_estimators': 1000, 'max_depth': 2, 'random_state': 1,
-                   'min_samples_split': 5}
 
-pl.figure()
+"""
+from sklearn.svm import SVC
+clf = SVC(C=50,
+          kernel='poly', gamma=0.005, degree=2, coef0=1.0,
+          cache_size=2000, max_iter=-1)
+clf.fit(X_train, y_train)
+print clf.score(X_test, y_test)
+"""
 
-#from sklearn.metrics import accuracy_score
-YPRED = []
+#poly C=30 degree=2   0.88983 +- 0.01283
+from sklearn.svm import SVC
+from sklearn.grid_search import GridSearchCV
+tuned_parameters = [{'C': np.arange(10, 100, 5)}]
+svm = SVC(kernel='poly', degree=2, coef0=1.0,
+          cache_size=2000, max_iter=-1)
+svm_cv = GridSearchCV(svm, tuned_parameters,
+                         cv=5, n_jobs=3, refit= False).fit(X, y)
+for params, mean_score, scores in svm_cv.grid_scores_:
+    if mean_score == svm_cv.best_score_:
+        print ("QDA %.5f +- %.5f for %s" %
+            (mean_score, scores.std(), params))
 
-for label, color, setting in [('No shrinkage', 'orange',
-                               {'learning_rate': 1.0, 'subsample': 1.0}),
-                              ('learning_rate=0.1', 'turquoise',
-                               {'learning_rate': 0.1, 'subsample': 1.0}),
-                              ('subsample=0.5', 'blue',
-                               {'learning_rate': 1.0, 'subsample': 0.5}),
-                              ('learning_rate=0.1, subsample=0.5', 'gray',
-                               {'learning_rate': 0.1, 'subsample': 0.5}),
-                              ('learning_rate=0.1, max_features=2', 'magenta',
-                               {'learning_rate': 0.1, 'max_features': 2})]:
-    print label
-    params = dict(original_params)
-    params.update(setting)
 
-    clf = ensemble.GradientBoostingClassifier(**params)
-    clf.fit(X_train, y_train)
 
-    # compute test set deviance
-    test_deviance = np.zeros((params['n_estimators'],), dtype=np.float64)
 
-    for i, y_pred in enumerate(clf.staged_decision_function(X_test)):
-        # clf.loss_ assumes that y_test[i] in {0, 1}
-        test_deviance[i] = clf.loss_(y_test, y_pred)
-        YPRED.append(y_pred)
-    pl.plot((np.arange(test_deviance.shape[0]) + 1)[::5], test_deviance[::5],
-            '-', color=color, label=label)
 
-pl.legend(loc='upper left')
-pl.xlabel('Boosting Iterations')
-pl.ylabel('Test Set Deviance')
-
-pl.show()

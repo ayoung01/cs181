@@ -51,3 +51,16 @@ pl.xlabel('Boosting Iterations')
 pl.ylabel('Test Set Deviance')
 
 pl.show()
+
+# Plot feature importance
+feature_importance = clf.feature_importances_
+# make importances relative to max importance
+feature_importance = 100.0 * (feature_importance / feature_importance.max())
+sorted_idx = np.argsort(feature_importance)
+pos = np.arange(sorted_idx.shape[0]) + .5
+pl.subplot(1, 2, 2)
+pl.barh(pos, feature_importance[sorted_idx], align='center')
+#pl.yticks(pos, boston.feature_names[sorted_idx])
+pl.xlabel('Relative Importance')
+pl.title('Variable Importance')
+pl.show()
