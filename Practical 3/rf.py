@@ -105,8 +105,8 @@ plt.show()
 plt.savefig('miss/' + model + '.png')
 
 
-y_pred = erf.predict(X_test)
-model = 'ERF'
+y_pred = rf.predict(X_test)
+model = 'RF'
 
 miss = np.zeros((15,15), dtype=int)
 for i in xrange(len(y_test)):
@@ -125,7 +125,7 @@ target_names =  ['Agent', 'AutoRun',
                  'VB', 'Virut', 'Zbot']
 fig = plt.figure()
 ax = fig.add_subplot(111)
-cax = ax.matshow(miss, interpolation='nearest')
+cax = ax.matshow(miss, interpolation='nearest', vmin=0, vmax=18)
 fig.colorbar(cax)
 plt.xticks(range(len(target_names)), target_names, rotation=45)
 plt.yticks(range(len(target_names)), target_names)

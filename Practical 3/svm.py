@@ -50,7 +50,7 @@ for params, mean_score, scores in svm_cv.grid_scores_:
             (mean_score, scores.std(), params))
 
 
-
+from sklearn.svm import SVC
 svm_best = SVC(C=30, kernel='poly', degree=2, coef0=1.0,
           cache_size=2000, max_iter=-1)
 y_pred = svm_best.fit(X_train, y_train).predict(X_test)
@@ -73,7 +73,7 @@ target_names =  ['Agent', 'AutoRun',
                  'VB', 'Virut', 'Zbot']
 fig = plt.figure()
 ax = fig.add_subplot(111)
-cax = ax.matshow(miss, interpolation='nearest')
+cax = ax.matshow(miss, interpolation='nearest', vmin=0, vmax=18)
 fig.colorbar(cax)
 plt.xticks(range(len(target_names)), target_names, rotation=45)
 plt.yticks(range(len(target_names)), target_names)
