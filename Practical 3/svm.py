@@ -51,5 +51,35 @@ for params, mean_score, scores in svm_cv.grid_scores_:
 
 
 
+svm_best = SVC(C=30, kernel='poly', degree=2, coef0=1.0,
+          cache_size=2000, max_iter=-1)
+y_pred = svm_best.fit(X_train, y_train).predict(X_test)
+model = 'svm'
+
+miss = np.zeros((15,15), dtype=int)
+for i in xrange(len(y_test)):
+    if y_test[i] != y_pred[i]:
+        if y_test[i] < y_pred[i]:
+            miss[int(y_test[i]), int(y_pred[i])] += 1
+        else:
+            miss[int(y_pred[i]), int(y_test[i])] += 1
+import matplotlib.pyplot as plt
+target_names =  ['Agent', 'AutoRun',
+                 'FraudLoad', 'FraudPack',
+                 'Hupigon', 'Krap',
+                 'Lipler', 'Magania',
+                 'None', 'Poison',
+                 'Swizzor', 'Tdss',
+                 'VB', 'Virut', 'Zbot']
+fig = plt.figure()
+ax = fig.add_subplot(111)
+cax = ax.matshow(miss, interpolation='nearest')
+fig.colorbar(cax)
+plt.xticks(range(len(target_names)), target_names, rotation=45)
+plt.yticks(range(len(target_names)), target_names)
+plt.title(model)
+plt.show()
+plt.savefig('miss/' + model + '.png')
+
 
 

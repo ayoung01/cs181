@@ -12,14 +12,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import l1_min_c
 
-X_train = np.load(open('x_train3', 'rb'))
-y_train = np.array(np.load(open('y_train', 'rb'))).flatten()
-
+X = np.load(open('x_train3', 'rb'))
+y = np.array(np.load(open('y_train', 'rb'))).flatten()
 
 # Transformation
-X_train = np.log(X_train + 1)
-X_train = StandardScaler().fit_transform(X_train)
+X = np.log(X + 1)
+X = StandardScaler().fit_transform(X)
 
+X_train, X_test = X[:2468], X[2468:]
+y_train, y_test = y[:2468], y[2468:]
 """
 from pandas.tools.plotting import scatter_matrix
 from pandas import DataFrame
@@ -87,6 +88,40 @@ coef_l2_LR = best_estimator2.coef_.ravel()
 sparsity_l2_LR = np.mean(coef_l2_LR == 0) * 100
 print sparsity_l2_LR
 
+
+
+
+
+
+
+l1_best = LogisticRegression(C= 1.5, penalty='l1', fit_intercept=True)
+y_pred = l1_best.fit(X_train, y_train).predict(X_test)
+model = 'Logisticl1'
+
+miss = np.zeros((15,15), dtype=int)
+for i in xrange(len(y_test)):
+    if y_test[i] != y_pred[i]:
+        if y_test[i] < y_pred[i]:
+            miss[int(y_test[i]), int(y_pred[i])] += 1
+        else:
+            miss[int(y_pred[i]), int(y_test[i])] += 1
+import matplotlib.pyplot as plt
+target_names =  ['Agent', 'AutoRun',
+                 'FraudLoad', 'FraudPack',
+                 'Hupigon', 'Krap',
+                 'Lipler', 'Magania',
+                 'None', 'Poison',
+                 'Swizzor', 'Tdss',
+                 'VB', 'Virut', 'Zbot']
+fig = plt.figure()
+ax = fig.add_subplot(111)
+cax = ax.matshow(miss, interpolation='nearest')
+fig.colorbar(cax)
+plt.xticks(range(len(target_names)), target_names, rotation=45)
+plt.yticks(range(len(target_names)), target_names)
+plt.title(model)
+plt.show()
+plt.savefig('miss/' + model + '.png')
 
 
 """

@@ -35,6 +35,7 @@ clf.fit(X_train, y_train)
 
 print clf.score(X_test, y_test)
 
+"""
 color = 'orange'
 label = 'learning_rate 0.1, subsample: 0.5'
 # compute test set deviance
@@ -52,15 +53,57 @@ pl.ylabel('Test Set Deviance')
 
 pl.show()
 
+
+feature_names = np.load(open('names3', 'rb'))
+import pylab as pl
 # Plot feature importance
 feature_importance = clf.feature_importances_
 # make importances relative to max importance
 feature_importance = 100.0 * (feature_importance / feature_importance.max())
 sorted_idx = np.argsort(feature_importance)
 pos = np.arange(sorted_idx.shape[0]) + .5
-pl.subplot(1, 2, 2)
-pl.barh(pos, feature_importance[sorted_idx], align='center')
-#pl.yticks(pos, boston.feature_names[sorted_idx])
+
+discard_bottom = 60
+pos_plot = pos[discard_bottom:]
+fi_plot = feature_importance[sorted_idx][discard_bottom:]
+names_plot = feature_names[sorted_idx][discard_bottom:]
+pl.subplot(1, 1, 1)
+pl.barh(pos_plot, fi_plot, align='center')
+pl.yticks(pos_plot, names_plot)
 pl.xlabel('Relative Importance')
-pl.title('Variable Importance')
+pl.title('Variable Importance GBT')
 pl.show()
+"""
+
+
+
+
+
+y_pred = clf.fit(X_train, y_train).predict(X_test)
+model = 'GBT'
+
+miss = np.zeros((15,15), dtype=int)
+for i in xrange(len(y_test)):
+    if y_test[i] != y_pred[i]:
+        if y_test[i] < y_pred[i]:
+            miss[int(y_test[i]), int(y_pred[i])] += 1
+        else:
+            miss[int(y_pred[i]), int(y_test[i])] += 1
+import matplotlib.pyplot as plt
+target_names =  ['Agent', 'AutoRun',
+                 'FraudLoad', 'FraudPack',
+                 'Hupigon', 'Krap',
+                 'Lipler', 'Magania',
+                 'None', 'Poison',
+                 'Swizzor', 'Tdss',
+                 'VB', 'Virut', 'Zbot']
+fig = plt.figure()
+ax = fig.add_subplot(111)
+cax = ax.matshow(miss, interpolation='nearest')
+fig.colorbar(cax)
+plt.xticks(range(len(target_names)), target_names, rotation=45)
+plt.yticks(range(len(target_names)), target_names)
+plt.title(model)
+plt.show()
+plt.savefig('miss/' + model + '.png')
+

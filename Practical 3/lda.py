@@ -11,16 +11,17 @@ import pylab as pl
 from sklearn.preprocessing import StandardScaler
 from sklearn.lda import LDA
 
-X_train = np.load(open('x_train3', 'rb'))
-y_train = np.array(np.load(open('y_train', 'rb'))).flatten()
-
+X = np.load(open('x_train3', 'rb'))
+y = np.array(np.load(open('y_train', 'rb'))).flatten()
 
 # Transformation
-X_train = np.log(X_train + 1)
-X_train = StandardScaler().fit_transform(X_train)
+X = np.log(X + 1)
+X = StandardScaler().fit_transform(X)
 
+X_train, X_test = X[:2468], X[2468:]
+y_train, y_test = y[:2468], y[2468:]
 
-# LDA performance: 0.848021274252 +- 0.00738902720209
+# LDA performance: 0.84076 +- 0.00519
 # LDA with class prior: same
 from sklearn import cross_validation
 classpriors = np.array([3.69, 1.62, 1.2, 1.03, 1.33, 1.26, 1.72,
@@ -31,6 +32,36 @@ lda_cv_score = cross_validation.cross_val_score(lda, X_train, y_train,
                                                 cv=5, n_jobs=2)
 print "LDA: %.5f +- %.5f" % (np.mean(lda_cv_score), np.std(lda_cv_score))
 
+
+
+model = 'LDA'
+miss = np.zeros((15,15), dtype=int)
+y_pred = lda.fit(X_train, y_train).predict(X_test)
+for i in xrange(len(y_test)):
+    if y_test[i] != y_pred[i]:
+        if y_test[i] < y_pred[i]:
+            miss[int(y_test[i]), int(y_pred[i])] += 1
+        else:
+            miss[int(y_pred[i]), int(y_test[i])] += 1
+import matplotlib.pyplot as plt
+target_names =  ['Agent', 'AutoRun',
+                 'FraudLoad', 'FraudPack',
+                 'Hupigon', 'Krap',
+                 'Lipler', 'Magania',
+                 'None', 'Poison',
+                 'Swizzor', 'Tdss',
+                 'VB', 'Virut', 'Zbot']
+fig = plt.figure()
+ax = fig.add_subplot(111)
+cax = ax.matshow(miss, interpolation='nearest')
+fig.colorbar(cax)
+plt.xticks(range(len(target_names)), target_names, rotation=45)
+plt.yticks(range(len(target_names)), target_names)
+plt.title(model)
+plt.show()
+plt.savefig('miss/' + model + '.png')
+
+"""
 # QDA 0.79164 +- 0.02957 for {'reg_param': 0.0054286754393238594}
 # Singularity issues with collinear features, so have to X_select
 from sklearn.linear_model import LogisticRegression
@@ -56,7 +87,7 @@ for params, mean_score, scores in qda_cv.grid_scores_:
 
 
 
-"""
+
 # Plot 2 PCA and LDA components
 from sklearn.decomposition import PCA
 
