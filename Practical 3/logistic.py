@@ -17,7 +17,8 @@ y = np.array(np.load(open('y_train', 'rb'))).flatten()
 
 # Transformation
 X = np.log(X + 1)
-X = StandardScaler().fit_transform(X)
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
 
 X_train, X_test = X[:2468], X[2468:]
 y_train, y_test = y[:2468], y[2468:]
@@ -90,12 +91,50 @@ print sparsity_l2_LR
 
 
 
-
-
-
-
+# final model
 l1_best = LogisticRegression(C= 1.5, penalty='l1', fit_intercept=True)
 y_pred = l1_best.fit(X_train, y_train).predict(X_test)
+
+
+
+#### Inspect misclassifications
+
+import pickle as pickle
+name_to_idx = pickle.load(open('names3', 'rb'))
+malware_to_idx = pickle.load(open('malware', 'rb'))
+
+## Inspect properties of misclassifications cases
+# transform X into original scale for easier inspection
+X0 = scaler.inverse_transform(X, copy=True)
+X0 = np.exp(X0) - 1
+X_test0 = X0[2468:]
+
+i_list  = []
+for i in xrange(len(y_pred)):
+    if y_pred[i] == malware_to_idx['Virut'] and y_test[i] == malware_to_idx['None']:
+        print 'i:%d \t%d ' % (i, X_test0[i,name_to_idx['file size']])
+        i_list.append(i)
+
+
+from sklearn.metrics import accuracy_score
+accuracy_score(y_pred, y_test)
+"""
+convert = []
+for i, y in enumerate(y_pred):
+    if y == malware_to_idx['None'] and \
+            int(X_test0[i,name_to_idx['create_mutex']]) == 1:
+        y_pred[i] = malware_to_idx['Virut']
+        print 'none to virut %d' % i
+        convert.append(i)
+    elif y == malware_to_idx['Virut'] and \
+            int(X_test0[i,name_to_idx['create_mutex']]) != 1:
+        y_pred[i] = malware_to_idx['None']
+        print 'virut to none: %d' % i
+        convert.append(i)
+"""
+
+
+## graph upper trianglar miss classification matrix
 model = 'Logisticl1'
 
 miss = np.zeros((15,15), dtype=int)
@@ -122,6 +161,30 @@ plt.yticks(range(len(target_names)), target_names)
 plt.title(model)
 plt.show()
 plt.savefig('miss/' + model + '.png')
+
+
+## graph full miss classification matrix
+miss = np.zeros((15,15), dtype=int)
+for i in xrange(len(y_test)):
+    if y_test[i] != y_pred[i]:
+        miss[int(y_test[i]), int(y_pred[i])] += 1
+import matplotlib.pyplot as plt
+target_names =  ['Agent', 'AutoRun',
+                 'FraudLoad', 'FraudPack',
+                 'Hupigon', 'Krap',
+                 'Lipler', 'Magania',
+                 'None', 'Poison',
+                 'Swizzor', 'Tdss',
+                 'VB', 'Virut', 'Zbot']
+fig = plt.figure()
+ax = fig.add_subplot(111)
+cax = ax.matshow(miss, interpolation='nearest', vmin=0, vmax=18)
+fig.colorbar(cax)
+plt.xticks(range(len(target_names)), target_names, rotation=45)
+plt.yticks(range(len(target_names)), target_names)
+plt.title(model)
+plt.show()
+plt.savefig('miss/' + model + 'full.png')
 
 
 """
