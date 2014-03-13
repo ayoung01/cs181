@@ -13,6 +13,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import l1_min_c
 
 X = np.load(open('x_train3', 'rb'))
+#X_dll = np.load(open('dll_matrix', 'rb'))
+#X = np.concatenate((X, X_dll), axis=1)
 y = np.array(np.load(open('y_train', 'rb'))).flatten()
 
 # Transformation
@@ -20,8 +22,20 @@ X = np.log(X + 1)
 scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
-X_train, X_test = X[:2468], X[2468:]
-y_train, y_test = y[:2468], y[2468:]
+#X_train, X_test = X[:2468], X[2468:]
+#y_train, y_test = y[:2468], y[2468:]
+
+X_train = X
+y_train = y
+
+
+from sklearn.decomposition import PCA
+pca = PCA(n_components=100)
+X_train = pca.fit(X_train).transform(X_train)
+print('explained variance: %f'
+      % np.sum(pca.explained_variance_ratio_))
+
+
 """
 from pandas.tools.plotting import scatter_matrix
 from pandas import DataFrame
@@ -33,21 +47,23 @@ scatter_matrix(df, alpha=0.2, figsize=(15, 15), diagonal='kde')
 
 
 # CV on Train set
-log_regr = LogisticRegression(penalty='l2', fit_intercept=True)
+log_regr = LogisticRegression(penalty='l1', fit_intercept=True)
 
 from sklearn.grid_search import GridSearchCV
-#cs = l1_min_c(X_train, y_train, loss='log') * np.logspace(0, 4)
+#cs = l1_min_c(X_train, y_train, loss='log') * np.logspace(0, 3)
 #cs = np.arange(0.6, 2, 0.1)
-cs = np.logspace(0, 4) * 0.1
+#cs = np.logspace(0, 4) * 0.1
+cs = [0.1, 1, 5, 10]
 tuned_parameters = [{'C': cs}]
 log_cv = GridSearchCV(log_regr, tuned_parameters,
-                         cv=2, n_jobs=3, refit= False)
+                         cv=5, n_jobs=3, refit= False)
 log_cv.fit(X_train, y_train)
 
 for params, mean_score, scores in log_cv.grid_scores_:
     if mean_score == log_cv.best_score_:
         print ("Logistic Regression\t%.5f +- %.5f for %s" %
             (mean_score, scores.std(), params))
+
 
 # L1 Sparsity 0.87622 +- 0.00969 for {'C': 1.4999999999999998}
 best_estimator = LogisticRegression(C = 1.5, penalty='l1', fit_intercept=True)
@@ -91,12 +107,30 @@ print sparsity_l2_LR
 
 
 
+
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+X = np.load(open('x_train3', 'rb'))
+y = np.array(np.load(open('y_train', 'rb'))).flatten()
+
+# Transformation
+X = np.log(X + 1)
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+X_train, X_test = X[:2468], X[2468:]
+y_train, y_test = y[:2468], y[2468:]
+
+
 # final model
-l1_best = LogisticRegression(C= 1.5, penalty='l1', fit_intercept=True)
-y_pred = l1_best.fit(X_train, y_train).predict(X_test)
+l1_best = LogisticRegression(C= 1.5, penalty='l1', fit_intercept=True).fit(X_train, y_train)
+print "logisticl1\t%.4f" % l1_best.score(X_test, y_test)
+pred_lg = l1_best.predict(X_test)
 
 
-
+"""
 #### Inspect misclassifications
 
 import pickle as pickle
@@ -119,6 +153,8 @@ for i in xrange(len(y_pred)):
 from sklearn.metrics import accuracy_score
 accuracy_score(y_pred, y_test)
 """
+
+"""
 convert = []
 for i, y in enumerate(y_pred):
     if y == malware_to_idx['None'] and \
@@ -134,9 +170,9 @@ for i, y in enumerate(y_pred):
 """
 
 
+"""
 ## graph upper trianglar miss classification matrix
 model = 'Logisticl1'
-
 miss = np.zeros((15,15), dtype=int)
 for i in xrange(len(y_test)):
     if y_test[i] != y_pred[i]:
@@ -185,7 +221,7 @@ plt.yticks(range(len(target_names)), target_names)
 plt.title(model)
 plt.show()
 plt.savefig('miss/' + model + 'full.png')
-
+"""
 
 """
 # Plot Regularization Paths
