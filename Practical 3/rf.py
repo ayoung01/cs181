@@ -62,6 +62,9 @@ X_test = StandardScaler().fit_transform(X_test)
 y_pred = erf.predict(X_test)
 
 
+ids = np.load(open('ids', 'rb'))
+import util
+util.write_predictions(y_pred, ids, 'predictions/rf.csv')
 
 """
 feature_names = np.load(open('names3', 'rb'))

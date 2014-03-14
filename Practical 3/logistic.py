@@ -130,6 +130,42 @@ print "logisticl1\t%.4f" % l1_best.score(X_test, y_test)
 pred_lg = l1_best.predict(X_test)
 
 
+
+
+# Output predictions
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+X = np.load(open('x_train3', 'rb'))
+y = np.array(np.load(open('y_train', 'rb'))).flatten()
+
+# Transformation
+X = np.log(X + 1)
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+l1_best = LogisticRegression(C= 1.5, penalty='l1', fit_intercept=True)
+l1_best.fit(X, y)
+print l1_best.score(X, y)
+
+X_test = np.load(open('x_test', 'rb'))
+from sklearn.preprocessing import StandardScaler
+X_test = np.log(X_test + 1)
+X_test = StandardScaler().fit_transform(X_test)
+y_pred = l1_best.predict(X_test)
+
+
+ids = np.load(open('ids', 'rb'))
+import util
+util.write_predictions(y_pred, ids, 'predictions/logisticl1.csv')
+
+
+
+
+
+
+
 """
 #### Inspect misclassifications
 
