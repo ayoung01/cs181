@@ -53,6 +53,7 @@ ngrams_by_doc = []
 
 for i, datafile in enumerate(file_names):
     grams = ""
+    current_gram = ""
     tree = ET.parse(os.path.join('train',datafile))
     in_all_section = False
     for el in tree.iter():
@@ -62,15 +63,17 @@ for i, datafile in enumerate(file_names):
         elif el.tag == "all_section" and in_all_section:
             in_all_section = False
         elif in_all_section:
-            grams += el.tag + " "
+            if not el.tag == current_gram:
+                current_gram = el.tag
+                grams += el.tag + " "
     print i
     ngrams_by_doc.append(grams.strip())
 
 # m = np.asmatrix(m)
 
-#f = open("x_test",'wb')
-#pickle.dump(m,f)
-#f.close()
+f = open("grams_list_condensed",'wb')
+pickle.dump(ngrams_by_doc,f)
+f.close()
 
 
 
