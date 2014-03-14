@@ -78,7 +78,7 @@ feature_importance = erf.feature_importances_
 # make importances relative to max importance
 feature_importance = 100.0 * (feature_importance / feature_importance.max())
 sorted_idx = np.argsort(-feature_importance)
-SELECTED = sorted_idx[:20]
+SELECTED = sorted_idx[:60]
 
 
 X_train = X_train[:, SELECTED]
@@ -107,7 +107,7 @@ print accuracy_score(pred_full, pred_selected)
 
 ids = np.load(open('ids', 'rb'))
 import util
-util.write_predictions(pred_selected, ids, 'predictions/erf_20var.csv')
+util.write_predictions(pred_selected, ids, 'predictions/erf_60var.csv')
 
 """
 pos = np.arange(sorted_idx.shape[0]) + .5
