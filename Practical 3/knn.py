@@ -5,9 +5,7 @@ Created on Mon Mar 10 13:53:14 2014
 @author: vincentli2010
 """
 
-
 import numpy as np
-import pylab as pl
 
 from sklearn.preprocessing import StandardScaler
 
@@ -30,7 +28,7 @@ knn = KNeighborsClassifier(n_neighbors=5, weights='distance',
 
 tuned_parameters = [{'n_neighbors': np.arange(1, 20, 1)}]
 knn_cv = GridSearchCV(knn, tuned_parameters,
-                         cv=5, n_jobs=2, refit= False).fit(X, y)
+                      cv=5, n_jobs=2, refit= False).fit(X, y)
 for params, mean_score, scores in knn_cv.grid_scores_:
     if mean_score == knn_cv.best_score_:
         print ("KNN %.5f +- %.5f for %s" %
@@ -52,11 +50,10 @@ for params, mean_score, scores in nc_cv.grid_scores_:
 
 
 import numpy as np
-import pylab as pl
 
-from sklearn.linear_model import LogisticRegression
+
 from sklearn.preprocessing import StandardScaler
-from sklearn.svm import l1_min_c
+from sklearn.neighbors import KNeighborsClassifier
 
 X = np.load(open('x_train3', 'rb'))
 y = np.array(np.load(open('y_train', 'rb'))).flatten()
@@ -69,10 +66,13 @@ X_train, X_test = X[:2468], X[2468:]
 y_train, y_test = y[:2468], y[2468:]
 
 knn_best = KNeighborsClassifier(n_neighbors=9, weights='distance',
-                           metric='minkowski', p=1)
-y_pred = knn_best.fit(X_train, y_train).predict(X_test)
-model = 'knn'
+                           metric='minkowski', p=1).fit(X_train, y_train)
+print "knn\t%.4f" % knn_best.score(X_test, y_test)
+pred_knn = knn_best.predict(X_test)
 
+
+"""
+model = 'knn'
 miss = np.zeros((15,15), dtype=int)
 for i in xrange(len(y_test)):
     if y_test[i] != y_pred[i]:
@@ -96,5 +96,5 @@ plt.xticks(range(len(target_names)), target_names, rotation=45)
 plt.yticks(range(len(target_names)), target_names)
 plt.title(model)
 plt.show()
-plt.savefig('miss/' + model + '.png')
-
+#plt.savefig('miss/' + model + '.png')
+"""

@@ -9,9 +9,10 @@ import numpy as np
 import pylab as pl
 
 from sklearn.preprocessing import StandardScaler
-from sklearn.lda import LDA
 
 X = np.load(open('x_train3', 'rb'))
+X_dll = np.load(open('dll_matrix', 'rb'))
+X = np.concatenate((X, X_dll), axis=1)
 y = np.array(np.load(open('y_train', 'rb'))).flatten()
 
 # Transformation
@@ -20,6 +21,10 @@ X = StandardScaler().fit_transform(X)
 
 X_train, X_test = X[:2468], X[2468:]
 y_train, y_test = y[:2468], y[2468:]
+
+
+
+
 
 # LDA performance: 0.84076 +- 0.00519
 # LDA with class prior: same
@@ -61,7 +66,7 @@ plt.title(model)
 plt.show()
 plt.savefig('miss/' + model + '.png')
 
-"""
+
 # QDA 0.79164 +- 0.02957 for {'reg_param': 0.0054286754393238594}
 # Singularity issues with collinear features, so have to X_select
 from sklearn.linear_model import LogisticRegression
@@ -87,7 +92,7 @@ for params, mean_score, scores in qda_cv.grid_scores_:
 
 
 
-
+"""
 # Plot 2 PCA and LDA components
 from sklearn.decomposition import PCA
 
