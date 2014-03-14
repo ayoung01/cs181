@@ -55,7 +55,7 @@ m = np.zeros([p,q])
 
 n = 0
 for datafile in file_names:
-    tree = ET.parse(os.path.join('test',datafile))
+    tree = ET.parse(os.path.join('train',datafile))
     in_all_section = False
     for el in tree.iter():
         # ignore everything outside the "all_section" element
@@ -71,9 +71,9 @@ for datafile in file_names:
 
 # m = np.asmatrix(m)
 
-f = open("x_test",'wb')
-pickle.dump(m,f)
-f.close()
+#f = open("x_test",'wb')
+#pickle.dump(m,f)
+#f.close()
 
 
 
