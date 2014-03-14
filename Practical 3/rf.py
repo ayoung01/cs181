@@ -16,10 +16,36 @@ from sklearn.preprocessing import StandardScaler
 X = np.log(X + 1)
 X = StandardScaler().fit_transform(X)
 
+"""
+from sklearn.cross_validation import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(
+         X, y, test_size=0.2, random_state=42)
+"""
+
 X_train = X
 y_train = y
-#X_train, X_test = X[:2468], X[2468:]
-#y_train, y_test = y[:2468], y[2468:]
+X_test = np.load(open('x_test', 'rb'))
+from sklearn.preprocessing import StandardScaler
+X_test = np.log(X_test + 1)
+X_test = StandardScaler().fit_transform(X_test)
+
+# n_estimators=300, max_features=20 oob_score = 0.901814646792
+from sklearn.ensemble import ExtraTreesClassifier
+erf = ExtraTreesClassifier(n_estimators=300, max_features='auto',
+                           bootstrap=True, oob_score=True,
+                           criterion='gini',
+                           max_depth=None, min_samples_split=2,
+                           min_samples_leaf=1,
+                           n_jobs=-1,
+                           random_state=None, verbose=0, min_density=None,
+                           compute_importances=None)
+erf.fit(X_train, y_train)
+print "PRE-selection oob\t%.4f" % (erf.oob_score_)
+
+pred_full = erf.predict(X_test)
+#print "pred_rf\t%.4f" % (erf.score(X_test, y_test))
+
+
 
 """
 #n_estimators=200, max_features=10 oob_score = 0.901490602722 valid: 0.891585760518
@@ -36,10 +62,31 @@ print rf.oob_score_
 #print rf.score(X_test, y_test)
 """
 
+
+"""
+# Output predictions
+y_pred = erf.predict(X_test)
+ids = np.load(open('ids', 'rb'))
+import util
+util.write_predictions(y_pred, ids, 'predictions/rf_pc10.csv')
+"""
+
+
+feature_names = np.load(open('names3', 'rb'))
+# Plot feature importance
+feature_importance = erf.feature_importances_
+# make importances relative to max importance
+feature_importance = 100.0 * (feature_importance / feature_importance.max())
+sorted_idx = np.argsort(-feature_importance)
+SELECTED = sorted_idx[:20]
+
+
+X_train = X_train[:, SELECTED]
+X_test = X_test[:, SELECTED]
+
 # n_estimators=300, max_features=20 oob_score = 0.901814646792
 from sklearn.ensemble import ExtraTreesClassifier
-
-erf = ExtraTreesClassifier(n_estimators=300, max_features=20,
+erf = ExtraTreesClassifier(n_estimators=300, max_features='auto',
                            bootstrap=True, oob_score=True,
                            criterion='gini',
                            max_depth=None, min_samples_split=2,
@@ -48,32 +95,21 @@ erf = ExtraTreesClassifier(n_estimators=300, max_features=20,
                            random_state=None, verbose=0, min_density=None,
                            compute_importances=None)
 erf.fit(X_train, y_train)
-print "oob\t%.4f" % (erf.oob_score_)
-
-#pred_rf = erf.predict(X_test)
-#print "pred_rf\t%.4f" % (erf.score(X_test, y_test))
-
+print "POST-selection oob\t%.4f" % (erf.oob_score_)
+#print "Test oob\t%.4f" % erf.score(X_test, y_test)
+pred_selected = erf.predict(X_test)
 
 # Output predictions
-X_test = np.load(open('x_test', 'rb'))
-from sklearn.preprocessing import StandardScaler
-X_test = np.log(X_test + 1)
-X_test = StandardScaler().fit_transform(X_test)
-y_pred = erf.predict(X_test)
+#y_pred = erf.predict(X_test)
 
+from sklearn.metrics import accuracy_score
+print accuracy_score(pred_full, pred_selected)
 
 ids = np.load(open('ids', 'rb'))
 import util
-util.write_predictions(y_pred, ids, 'predictions/rf.csv')
+util.write_predictions(pred_selected, ids, 'predictions/erf_20var.csv')
 
 """
-feature_names = np.load(open('names3', 'rb'))
-import pylab as pl
-# Plot feature importance
-feature_importance = rf.feature_importances_
-# make importances relative to max importance
-feature_importance = 100.0 * (feature_importance / feature_importance.max())
-sorted_idx = np.argsort(feature_importance)
 pos = np.arange(sorted_idx.shape[0]) + .5
 
 discard_bottom = 60

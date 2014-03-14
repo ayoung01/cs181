@@ -19,7 +19,7 @@ X_train_base = np.load(open('x_train3', 'rb'))
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 import pickle as pickle
-text_train = pickle.load(open('grams_list','rb'))
+text_train = pickle.load(open('grams_list_dll','rb'))
 vectorizer = CountVectorizer(ngram_range=(1,10))
 X_train_order = vectorizer.fit_transform(text_train)
 X_train_order = TfidfTransformer().fit_transform(X_train_order)
@@ -30,16 +30,27 @@ X_train_order = TfidfTransformer().fit_transform(X_train_order)
 #print np.sum(pca.explained_variance_ratio_)
 #X_train_order = pca.transform(X_train_order)
 
-#X_train = np.concatenate((X_train_base, X_train_order), axis=1)
-X = X_train_order
-
-X_train, X_test = X[:2468], X[2468:]
-y_train, y_test = y[:2468], y[2468:]
+X = np.concatenate((X_train_base, X_train_order), axis=1)
+#X = X_train_order
 
 from sklearn.linear_model import SGDClassifier
-clf = SGDClassifier(penalty = 'elasticnet', alpha = 0.00001)
-clf.fit(X_train, y_train)
-print clf.score(X_test, y_test)
+clf = SGDClassifier(penalty = 'elasticnet', alpha = 0.000001)
+clf.fit(X, y)
+print clf.score(X, y)
+
+
+
+# Output predictions
+X_test = np.load(open('x_test', 'rb'))
+from sklearn.preprocessing import StandardScaler
+X_test = np.log(X_test + 1)
+X_test = StandardScaler().fit_transform(X_test)
+
+y_pred = clf.predict(X_test)
+ids = np.load(open('ids', 'rb'))
+import util
+util.write_predictions(y_pred, ids, 'predictions/rf_pc10.csv')
+
 
 """
 from sklearn.ensemble import ExtraTreesClassifier
@@ -90,7 +101,7 @@ plt.show()
 
 
 
-
+"""
 
 from pprint import pprint
 from time import time
@@ -148,3 +159,4 @@ if __name__ == "__main__":
     best_parameters = grid_search.best_estimator_.get_params()
     for param_name in sorted(parameters.keys()):
         print("\t%s: %r" % (param_name, best_parameters[param_name]))
+"""
