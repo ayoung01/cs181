@@ -44,16 +44,10 @@ f.close()
 file_names = os.listdir('train')
 file_names.sort()
 
-p = len(file_names)
-
-
-n = 0
-
 ngrams_by_doc = []
 
 for i, datafile in enumerate(file_names):
     grams = ""
-    current_gram = ""
     tree = ET.parse(os.path.join('train',datafile))
     in_all_section = False
     for el in tree.iter():
@@ -63,15 +57,22 @@ for i, datafile in enumerate(file_names):
         elif el.tag == "all_section" and in_all_section:
             in_all_section = False
         elif in_all_section:
-            if not el.tag == current_gram:
-                current_gram = el.tag
+            
+            if el.tag == "load_dll":
+                try:
+                    grams += el.attrib['filename'][20:-4] + " "
+                except:
+                    grams += el.tag + " "
+            else:
                 grams += el.tag + " "
     print i
+    #if i == 2:
+    #    break
     ngrams_by_doc.append(grams.strip())
 
 # m = np.asmatrix(m)
 
-f = open("grams_list_condensed",'wb')
+f = open("grams_list_dll",'wb')
 pickle.dump(ngrams_by_doc,f)
 f.close()
 
