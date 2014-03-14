@@ -16,8 +16,10 @@ from sklearn.preprocessing import StandardScaler
 X = np.log(X + 1)
 X = StandardScaler().fit_transform(X)
 
-X_train, X_test = X[:2468], X[2468:]
-y_train, y_test = y[:2468], y[2468:]
+X_train = X
+y_train = y
+#X_train, X_test = X[:2468], X[2468:]
+#y_train, y_test = y[:2468], y[2468:]
 
 """
 #n_estimators=200, max_features=10 oob_score = 0.901490602722 valid: 0.891585760518
@@ -48,8 +50,19 @@ erf = ExtraTreesClassifier(n_estimators=300, max_features=20,
 erf.fit(X_train, y_train)
 print "oob\t%.4f" % (erf.oob_score_)
 
-pred_rf = erf.predict(X_test)
-print "pred_rf\t%.4f" % (erf.score(X_test, y_test))
+#pred_rf = erf.predict(X_test)
+#print "pred_rf\t%.4f" % (erf.score(X_test, y_test))
+
+
+# Output predictions
+X_test = np.load(open('x_test', 'rb'))
+from sklearn.preprocessing import StandardScaler
+X_test = np.log(X_test + 1)
+X_test = StandardScaler().fit_transform(X_test)
+y_pred = erf.predict(X_test)
+
+
+
 """
 feature_names = np.load(open('names3', 'rb'))
 import pylab as pl
