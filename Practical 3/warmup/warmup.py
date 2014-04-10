@@ -127,7 +127,6 @@ def plot_logistic():
     # Put the result into a color plot
     Z = Z.reshape(xx.shape)
     plt.contourf(xx, yy, Z, cmap=plt.cm.Paired)
-    plt.axis('off')
     
     # Plot also the training points
     plt.scatter(X[:, 0], X[:, 1], c=phi2[:,0])
@@ -194,11 +193,22 @@ def plot_gen():
     # Put the result into a color plot
     Z = Z.reshape(xx.shape)
     plt.contourf(xx, yy, Z, cmap=plt.cm.Paired)
-    plt.axis('off')
+    #plt.axis('off')
     
     # Plot also the training points
     plt.scatter(X[:, 0], X[:, 1], c=phi2[:,0])
     plt.show()
     
-#plot_logistic()
-plot_gen()
+plot_logistic()
+#plot_gen()
+
+# Count the number of correctly classified cases:
+counts = [0,0,0]
+for i, n in enumerate(generative_model(X)):
+    if n+1 == phi2[i][0]:
+        counts[n]+=1
+        
+counts = [0,0,0]
+for i, n in enumerate(logistic_model(phi)):
+    if n+1 == phi2[i][0]:
+        counts[n]+=1
