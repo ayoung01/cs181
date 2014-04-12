@@ -113,7 +113,7 @@ class Learner:
 
         self.last_reward = reward
 
-iters = 10000
+iters = 1000
 learner = Learner()
 scores = []
 

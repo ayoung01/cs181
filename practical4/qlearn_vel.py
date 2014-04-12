@@ -6,11 +6,11 @@ from time import gmtime, strftime
 
 from SwingyMonkey import SwingyMonkey
 
-BINSIZE = 50 # Number of pixels per bin
+BINSIZE = 40 # Number of pixels per bin
 GAMMA = 0.9 # Discount factor
 r = 0 # Distance to neighbors for imputation
 INIT = 0 # initial Q values
-ALPHA = 0.3
+# ALPHA = 0.3
 
 class Learner:
 
@@ -91,7 +91,7 @@ class Learner:
 
             new_action = sanity_check(new_action)
             self.k[new_action][V,D,T,M] += 1
-            # ALPHA = 1/self.k[new_action][V,D,T,M]
+            ALPHA = 1/self.k[new_action][V,D,T,M]
             self.Q[self.last_action][v,d,t,m] += ALPHA*(self.last_reward+GAMMA*max_Q-self.Q[self.last_action][v,d,t,m])
         new_action = sanity_check(new_action)
         self.last_action = new_action
