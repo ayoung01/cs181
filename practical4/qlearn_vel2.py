@@ -6,15 +6,17 @@ from time import gmtime, strftime
 
 from SwingyMonkey import SwingyMonkey
 
-BINSIZE=20 # Number of pixels per bin
-GAMMA=0.9 # Discount factor
-ALPHA_POW=0
-n_iter = 1000
-SANITY_CHECK = False
+BINSIZE_LIST = [10,20,30,40]
+GAMMA_LIST = [.1, .9]
+ALPHA_POW_LIST = [0,1]
+SANITY_CHECK = True
 DEFAULT_ACTION = False
 
+# BINSIZE = 35 # Number of pixels per bin
+# GAMMA = 0.3 # Discount factor
 r = 0 # Distance to neighbors for imputation
 INIT = 0 # initial Q values
+# ALPHA = 0.3
 
 class Learner:
 
@@ -27,7 +29,8 @@ class Learner:
         self.imputed = 1
         self.Q = np.zeros((2,2,600/self.BINSIZE+1,400/self.BINSIZE+1,400/self.BINSIZE+1))
         self.Q.fill(INIT)
-        self.k = np.zeros((2,2,600/self.BINSIZE+1,400/self.BINSIZE+1,400/self.BINSIZE+1)) # number of times action a has been taken from state s
+        # number of times action a has been taken from state s
+        self.k = np.zeros((2,2,600/self.BINSIZE+1,400/self.BINSIZE+1,400/self.BINSIZE+1))
 
     def reset(self):
         self.last_state  = None
@@ -47,8 +50,9 @@ class Learner:
 
         '''
         Q matrix: 
-        ndarray of dimensions A X D x T x M
+        ndarray of dimensions A x V x D x T x M
         A: <action space: 0 or 1>
+        V: <velocity, 0 if going down else 1>
         D: <pixels to next tree trunk>
         T: <screen height of bottom of tree trunk>
         M: <screen height of bottom of monkey>
@@ -65,9 +69,9 @@ class Learner:
         # We never want to fall off the bottom or go through the roof
         def sanity_check(action):
             if SANITY_CHECK:
-                if state['monkey']['bot'] < 15: # if we're too close to the bottom, jump
+                if state['monkey']['bot'] < 10: # if we're too close to the bottom, jump
                     return 1
-                if state['monkey']['top'] > 350: # if we're too close to the top, don't jump
+                if state['monkey']['top'] > 380: # if we're too close to the top, don't jump
                     return 0
             return action
 
@@ -78,8 +82,6 @@ class Learner:
                 if state['monkey']['top'] > 300: # if we're too close to the top, don't jump
                     return 1 if npr.rand() < 0.1 else 0
                 if state['monkey']['bot']-state['tree']['bot'] < 50 and state['tree']['dist'] > 0 and state['tree']['dist'] < 150: # if we're way too close to hitting bottom tree trunk, jump
-                    return 1 if npr.rand() < 0.9 else 0
-                if state['monkey']['bot']-state['tree']['bot'] < 50 and state['tree']['dist'] > -15 and state['tree']['dist'] < 15: # if we're way too close to hitting bottom tree trunk, jump
                     return 1 if npr.rand() < 0.9 else 0
             return 1 if npr.rand() < 0.1 else 0
 
@@ -114,33 +116,39 @@ class Learner:
 
 results_list = []
 count = 0
-learner = Learner(params=(BINSIZE,GAMMA,ALPHA_POW))
+for n_iter in [1000]:
+    for BINSIZE in BINSIZE_LIST:
+        for GAMMA in GAMMA_LIST:
+            for ALPHA_POW in ALPHA_POW_LIST:
+                learner = Learner(params=(BINSIZE,GAMMA,ALPHA_POW))
+                
+                count+=1
+                scores = []
+                for ii in xrange(n_iter):
+                    # Make a new monkey object.
+                    swing = SwingyMonkey(
+                                         sound=False,            # Don't play sounds.
+                                         tick_length=1,          # Make game ticks super fast.
+                                         # Display the epoch on screen and % of Q matrix filled
+                                         text="Epoch %d " % (ii) + str(round(float(np.sum(learner.Q!=INIT))*100/learner.Q.size,3)) + "%", 
+                                         action_callback=learner.action_callback,
+                                         reward_callback=learner.reward_callback)
 
-count+=1
-scores = []
-for ii in xrange(n_iter):
-    # Make a new monkey object.
-    swing = SwingyMonkey(
-                         sound=False,            # Don't play sounds.
-                         tick_length=1,          # Make game ticks super fast.
-                         # Display the epoch on screen and % of Q matrix filled
-                         text="Epoch %d " % (ii) + str(round(float(np.sum(learner.Q!=INIT))*100/learner.Q.size,3)) + "%", 
-                         action_callback=learner.action_callback,
-                         reward_callback=learner.reward_callback)
+                    # Loop until you hit something.
+                    while swing.game_loop():
+                        pass
 
-    # Loop until you hit something.
-    while swing.game_loop():
-        pass
+                    # Keep track of the score for that epoch.
+                    scores.append(learner.last_state['score'])
+                    # print 'score %d' % learner.last_state['score'], str(round(float(np.sum(learner.Q!=INIT))*100/learner.Q.size,3)) + "%"
 
-    # Keep track of the score for that epoch.
-    scores.append(learner.last_state['score'])
-    print 'score %d' % learner.last_state['score'], str(round(float(np.sum(learner.Q!=INIT))*100/learner.Q.size,3)) + "%"
+                    # Reset the state of the learner.
+                    learner.reset()
 
-    # Reset the state of the learner.
-    learner.reset()
+                print BINSIZE,GAMMA,ALPHA_POW, count, np.mean(scores), np.std(scores),int(np.max(scores))
+                results_list.append([int(BINSIZE), GAMMA, ALPHA_POW, np.mean(scores), np.std(scores),int(np.max(scores))])
+    np.savetxt(strftime("out/%m-%d %H:%M:%S", gmtime())+str(n_iter)+".txt", results_list)
+    # np.savetxt(strftime("out/%m-%d %H:%M:%S", gmtime())+"-"+str(n_iter)+".txt", scores)
 
-print BINSIZE,GAMMA,ALPHA_POW, count, np.mean(scores), np.std(scores),int(np.max(scores))
-results_list.append([int(BINSIZE), GAMMA, ALPHA_POW, np.mean(scores), np.std(scores),int(np.max(scores))])
-# np.savetxt(strftime("out/%m-%d %H:%M:%S", gmtime())+str(n_iter)+".txt", results_list)
 
 
