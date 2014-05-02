@@ -23,10 +23,6 @@ X = raw[:, 7:15]
 #X = np.concatenate( (raw[:, 4:5], raw[:, 7:15]) , axis=1)
 X = X[exclude_bad_ghosts,:]
 
-# Transformation
-from sklearn.preprocessing import StandardScaler
-X = StandardScaler().fit_transform(X)
-
 X_train = X
 y_train = y_class
 
@@ -37,7 +33,7 @@ erf = ExtraTreesClassifier(n_estimators=300, max_features='auto',
                            criterion='gini',
                            max_depth=None, min_samples_split=2,
                            min_samples_leaf=1,
-                           n_jobs=2,
+                           n_jobs=-1,
                            random_state=None, verbose=0, min_density=None,
                            compute_importances=None)
 erf.fit(X_train, y_train)
@@ -56,7 +52,7 @@ print feature_importance
 from sklearn.externals import joblib
 ghost_predictor = erf
 joblib.dump(ghost_predictor, 'ghost_predictor.pkl', compress=9)
-#model_clone = joblib.load('my_model.pkl')
+#ghost_predictor = joblib.load('ghost_predictor.pkl')
 """
 #n_estimators=200, max_features=10 oob_score = 0.901490602722 valid: 0.891585760518
 from sklearn.ensemble import RandomForestClassifier
