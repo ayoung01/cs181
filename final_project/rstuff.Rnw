@@ -1,0 +1,15 @@
+\documentclass{article}
+
+\begin{document}
+
+<<>>=
+nrow(ghost_train)
+quadrant1=rep(0,nrow(ghost_train))
+ghost_train=cbind(new_col,new_col,new_col,ghost_train)
+lmfit=lm(formula=score~feat1+feat2+feat3+feat4+feat5+feat6+feat7+feat8+feat9+feat10+feat11+feat12+feat13+quadrant1+quadrant2+quadrant3+quadrant4+class,data=ghost_train)
+summary(lmfit)
+@
+
+
+
+\end{document}
