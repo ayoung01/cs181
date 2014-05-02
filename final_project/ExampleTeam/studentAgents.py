@@ -41,6 +41,7 @@ class QLearnAgent(BaseStudentAgent):
         self.last_state  = None
         self.last_action = None
         self.last_score = None
+        self.bad_ghost = None
         # self.epoch = 1
         self.Q = np.zeros((5,7,4,4,7,4,7,4,2,2))
         # number of times action a has been taken from state s
@@ -74,23 +75,46 @@ class QLearnAgent(BaseStudentAgent):
 
         J: scared_ghost_present: <0,1>
         '''
-        
         # process current state variables
         pacmanPosition = observedState.getPacmanPosition()
         ghost_states = observedState.getGhostStates() # states have getPosition() and getFeatures() methods
         legalActs = [a for a in observedState.getLegalPacmanActions()]
         ghost_dists = np.array([self.distancer.getDistance(pacmanPosition,gs.getPosition()) 
                               for gs in ghost_states])
+        ghost_quadrants = [observedState.getGhostQuadrant(gs) for gs in ghost_states]
+        ghost_features = [gs.getFeatures[0] for gs in ghost_states]
+
+        # if we are just starting the game
+        if self.last_action==None:
+            # we identify the bad ghost by its first feature
+            self.bad_ghost = ghost_states[ghost_quadrants.index(4)].getFeatures[0]
+
+        # check for the spawn of a new bad ghost
+        if not self.bad_ghost in ghost_features:
+            for gs in ghost_states:
+                if not gs.getFeatures[0] in ghost_features:
+                    self.bad_ghost = gs.getFeatures[0]
+
+                    if ghost_states[ghost_quadrants.index(4)].getFeatures[0] != self.bad_ghost:
+                        print 'bad ghost problem'
+        
         capsule_data = observedState.getCapsuleData()
         curr_score = observedState.getScore()
         J = observedState.scaredGhostPresent()
 
         def getGoodGhost(ghost_states):
             # process features to return distance, direction, class of best ghost
+            # FEATURES:
+            # Whether ghost is from quadrant 4
+            # Given good ghost, need features 1-8
+            # 
             return good_dist, good_dir, good_class
 
         def getBadGhost(ghost_states):
-            # process features to return distance, direction of bad ghost
+            gs = ghost_states[ghost_features.index(self.bad_ghost)]
+            bad_dist = self.distancer.getDistance(pacmanPosition,gs.getPosition())
+            
+
             return bad_dist, bad_dir
 
         def getBestCapsule(capsule_data):
@@ -174,8 +198,14 @@ class ExampleTeamAgent(BaseStudentAgent):
         legalActs = [a for a in observedState.getLegalPacmanActions()]
         ghost_dists = np.array([self.distancer.getDistance(pacmanPosition,gs.getPosition()) 
                               for gs in ghost_states])
-        # print 'dists',ghost_dists
-        print ghost_states[1].getFeatures()
+        ghost_quadrants = [observedState.getGhostQuadrant(gs) for gs in ghost_states]
+        # try:
+        #     bad_ghost = ghost_states[ghost_quadrants.index(4)]
+        #     print bad_ghost.getFeatures()
+        # except:
+        #     print ghost_quadrants
+        # good_ghosts = ghost_states.remove(bad_ghost)
+        # print ghost_states[0].getFeatures()
         # find the closest ghost by sorting the distances
         closest_idx = sorted(zip(range(len(ghost_states)),ghost_dists), key=lambda t: t[1])[0][0]
         # take the action that minimizes distance to the current closest ghost
