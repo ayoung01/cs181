@@ -64,6 +64,7 @@ class ExampleTeamAgent(BaseStudentAgent):
         to. This is not a very good strategy, and completely ignores the features of
         the ghosts and the capsules; it is just designed to give you an example.
         """
+        goodCapsules = observedState.getGoodCapsuleExamples()
         pacmanPosition = observedState.getPacmanPosition()
         ghost_states = observedState.getGhostStates() # states have getPosition() and getFeatures() methods
         legalActs = [a for a in observedState.getLegalPacmanActions()]
