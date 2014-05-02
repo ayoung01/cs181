@@ -40,11 +40,11 @@ class QLearnAgent(BaseStudentAgent):
         """
         self.last_state  = None
         self.last_action = None
-        self.last_reward = None
+        self.last_score = None
         # self.epoch = 1
-        self.Q = np.zeros((5,7,4,4,7,4,7,4,2))
+        self.Q = np.zeros((5,7,4,4,7,4,7,4,2,2))
         # number of times action a has been taken from state s
-        self.k = np.zeros((5,7,4,4,7,4,7,4,2))
+        self.k = np.zeros((5,7,4,4,7,4,7,4,2,2))
     
     def registerInitialState(self, gameState):
         """
@@ -60,16 +60,16 @@ class QLearnAgent(BaseStudentAgent):
 
     def chooseAction(self, observedState):
         '''
-        A: action space: <'N','E','S','W', 'STOP'>
-        B: good_dist: smallest number of steps to tracked ghost <1,2,3,4,5,6-9,10+>
-        C: good_dir: direction to reach tracked ghost <'N','E','S','W'>
+        A: action space: <'0:N','1:E','2:S','3:W','4:STOP'>
+        B: good_dist: smallest number of steps to tracked ghost <1:1,2:2,3:3,4:4,5:5,6:6-9,7:10+>
+        C: good_dir: direction to reach tracked ghost <'0:N','1:E','2:S','3:W'>
         D: good_class: predicted class of tracked ghost <0,1,2,3>
 
-        E: bad_dist: smallest number of steps to bad ghost <1,2,3,4,5,6-9,10+>
-        F: bad_dir: direction to reach bad ghost <'N','E','S','W'>
+        E: bad_dist: smallest number of steps to bad ghost <1:1,2:2,3:3,4:4,5:5,6:6-9,7:10+>
+        F: bad_dir: direction to reach bad ghost <'0:N','1:E','2:S','3:W'>
 
-        G: cap_dist: smallest number of steps to best capsule in world <1,2,3,4,5,6-9,10+>
-        H: cap_dir: direction to reach best capsule in world <'N','E','S','W'>
+        G: cap_dist: smallest number of steps to best capsule in world <1:1,2:2,3:3,4:4,5:5,6:6-9,7:10+>
+        H: cap_dir: direction to reach best capsule in world <'0:N','1:E','2:S','3:W'>
         I: cap_type: predicted capsule type <0,1>
 
         J: scared_ghost_present: <0,1>
@@ -82,6 +82,7 @@ class QLearnAgent(BaseStudentAgent):
         ghost_dists = np.array([self.distancer.getDistance(pacmanPosition,gs.getPosition()) 
                               for gs in ghost_states])
         capsule_data = observedState.getCapsuleData()
+        curr_score = observedState.getScore()
         J = observedState.scaredGhostPresent()
 
         def getGoodGhost(ghost_states):
@@ -103,33 +104,31 @@ class QLearnAgent(BaseStudentAgent):
         curr_state = B,C,D,E,F,G,H,I,J
 
         def default_action():
-            return random.choice([Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST, Directions.STOP])
+            return random.choice([0,1,2,3,4])
 
-        # TODO: implement reward callback
+        last_reward = curr_score - self.last_score
         
         new_action = default_action()
         if not self.last_action == None: # if we're not at the very beginning of the epoch
-            # previous state
-            # process state parameters for previous state
-
-
-            max_Q = np.max(self.Q[:,B,C,D,E,F,G,H,I,J])
+            max_Q = np.max(self.Q[:,curr_state])
 
             # if we've seen this state before, take greedy action:
-            if not sum(self.Q[:,B,C,D,E,F,G,H,I,J])==0:
-                Q_N = self.Q['N',B,C,D,E,F,G,H,I,J]
-                Q_S = self.Q['S',B,C,D,E,F,G,H,I,J]
-                Q_W = self.Q['W',B,C,D,E,F,G,H,I,J]
-                Q_E = self.Q['E',B,C,D,E,F,G,H,I,J]
-                Q_STOP = self.Q['STOP',B,C,D,E,F,G,H,I,J]
-                new_action = '# max of above'
+            if not sum(self.Q[:,curr_state])==0:
+                Q_N = self.Q[0,curr_state]
+                Q_E = self.Q[1,curr_state]
+                Q_S = self.Q[2,curr_state]
+                Q_W = self.Q[3,curr_state]
+                Q_STOP = self.Q[4,curr_state]
 
-            self.k[new_action,B,C,D,E,F,G,H,I,J] += 1
-            ALPHA = 1/pow(self.k[new_action,B,C,D,E,F,G,H,I,J], self.ALPHA_POW)
+                new_action = np.argmax(Q_N,Q_E,Q_S,Q_W,Q_STOP)
 
-            self.Q[self.last_action, self.last_state] += ALPHA*(self.last_reward+self.GAMMA*max_Q-self.Q[self.last_action, self.last_state])
+            self.k[new_action,curr_state] += 1
+            ALPHA = 1/pow(self.k[new_action,curr_state], self.ALPHA_POW)
+
+            self.Q[self.last_action, self.last_state] += ALPHA*(last_reward+self.GAMMA*max_Q-self.Q[self.last_action, self.last_state])
         self.last_action = new_action
         self.last_state  = curr_state
+        self.last_score = curr_score
 
         return new_action
 
