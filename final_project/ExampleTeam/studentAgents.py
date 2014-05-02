@@ -96,24 +96,39 @@ class QLearnAgent(BaseStudentAgent):
                     self.bad_ghost = gs.getFeatures[0]
 
                     if ghost_states[ghost_quadrants.index(4)].getFeatures[0] != self.bad_ghost:
-                        print 'bad ghost problem'
+                        raise Exception("Bad ghost identified not in quadrant 4")
         
         capsule_data = observedState.getCapsuleData()
         curr_score = observedState.getScore()
         J = observedState.scaredGhostPresent()
+
+        # returns 0, 1, 2, or 3 corresponding to North, East, South, West
+        def getDirection(pacman_pos, ghost_pos):
+            x,y = ghost_pos-pacman_pos
+            if x==0 and y==0:
+                raise Exception("Ghost targeted in collision with Pacman")
+            if abs(y) >= abs(x):
+                if y >= 0:
+                    return 0 # North
+                else:
+                    return 2 # South
+            else:
+                if x >=0:
+                    return 1 # East
+                else:
+                    return 3 # West
 
         def getGoodGhost(ghost_states):
             # process features to return distance, direction, class of best ghost
             # FEATURES:
             # Whether ghost is from quadrant 4
             # Given good ghost, need features 1-8
-            # 
             return good_dist, good_dir, good_class
 
         def getBadGhost(ghost_states):
             gs = ghost_states[ghost_features.index(self.bad_ghost)]
             bad_dist = self.distancer.getDistance(pacmanPosition,gs.getPosition())
-            
+            bad_dir = getDirection(pacmanPosition,gs.getPosition())
 
             return bad_dist, bad_dir
 
@@ -199,13 +214,8 @@ class ExampleTeamAgent(BaseStudentAgent):
         ghost_dists = np.array([self.distancer.getDistance(pacmanPosition,gs.getPosition()) 
                               for gs in ghost_states])
         ghost_quadrants = [observedState.getGhostQuadrant(gs) for gs in ghost_states]
-        # try:
-        #     bad_ghost = ghost_states[ghost_quadrants.index(4)]
-        #     print bad_ghost.getFeatures()
-        # except:
-        #     print ghost_quadrants
-        # good_ghosts = ghost_states.remove(bad_ghost)
-        # print ghost_states[0].getFeatures()
+        print pacmanPosition
+
         # find the closest ghost by sorting the distances
         closest_idx = sorted(zip(range(len(ghost_states)),ghost_dists), key=lambda t: t[1])[0][0]
         # take the action that minimizes distance to the current closest ghost
