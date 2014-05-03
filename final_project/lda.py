@@ -7,9 +7,9 @@ Created on Sun Mar  9 20:23:44 2014
 
 import numpy as np
 
-"""
+
 import pickle
-raw = pickle.load(open('capsule_data', 'r'))
+raw = pickle.load(open('capsule_data_new', 'r'))
 data = np.empty((len(raw), 4))
 for i, sample in enumerate(raw):
   data[i, :3] = sample[0]
@@ -17,10 +17,11 @@ for i, sample in enumerate(raw):
 
 X_train = data[:, :3]
 y_train = data[:, 3]
-"""
+
 
 #raw = np.genfromtxt('/home/vincentli2010/Desktop/ghost_train.csv', delimiter=',')[:10000]
 #np.save(open('ghost_train.npy', 'wb'), raw)
+"""
 raw = np.load(open('ghost_train.npy', 'rb'))
 raw = raw[1:,:]
 y_class = raw[:, 5]
@@ -37,7 +38,7 @@ X = X[exclude_bad_ghosts,:]
 
 X_train = X
 y_train = y_class
-
+"""
 # LDA performance: 0.84076 +- 0.00519
 # LDA with class prior: same
 from sklearn import cross_validation
@@ -50,5 +51,5 @@ print "LDA: %.5f +- %.5f" % (np.mean(lda_cv_score), np.std(lda_cv_score))
 lda.fit(X_train, y_train)
 
 from sklearn.externals import joblib
-joblib.dump(ghost_predictor_lda, 'ghost_predictor_lda.pkl', compress=9)
+joblib.dump(lda, 'capsule_predictor_lda.pkl', compress=9)
 #ghost_predictor = joblib.load('ghost_predictor.pkl')
