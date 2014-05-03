@@ -10,6 +10,8 @@ from sklearn.externals import joblib
 
 import sys
 
+# TO RUN FOR 1 million iterations:
+# ayoung$ python pacman.py -m 1000001 -q -T ExampleTeam
 
 VERBOSE = False
 DUMP = True
