@@ -44,9 +44,9 @@ class QLearnAgent(BaseStudentAgent):
         self.last_score = None
         self.bad_ghost = None
         # self.epoch = 1
-        self.Q = np.zeros((5,7,4,4,7,4,7,4,2,2))
+        self.Q = np.zeros((5,7,4,7,4,7,4,2,2))
         # number of times action a has been taken from state s
-        self.k = np.zeros((5,7,4,4,7,4,7,4,2,2))
+        self.k = np.zeros((5,7,4,7,4,7,4,2,2))
         self.ghost_predictor = joblib.load('ghost_predictor.pkl')
     
     def registerInitialState(self, gameState):
@@ -151,10 +151,6 @@ class QLearnAgent(BaseStudentAgent):
                     if gs_distance_list[i] < gs_distance_list[best_gs_i]:
                         best_gs_i = i
 
-            # process features to return distance, direction, class of best ghost
-            # FEATURES:
-            # Whether ghost is from quadrant 4
-            # Given good ghost, need features 1-8
             return gs_distance_list[best_gs_i], gs_distance_list[best_gs_i]
 
         def getBadGhost(ghost_states):
@@ -168,11 +164,11 @@ class QLearnAgent(BaseStudentAgent):
             # process capsule locations and features to return distance, direction, type of best capsule
             return cap_dist, cap_dir, cap_type
 
-        B,C,D = getGoodGhost(ghost_states)
+        B,C = getGoodGhost(ghost_states)
         E,F = getBadGhost(ghost_states)
         G,H,I = getBestCapsule(capsule_data)
 
-        curr_state = B,C,D,E,F,G,H,I,J
+        curr_state = B,C,E,F,G,H,I,J
 
         def default_action():
             return random.choice([0,1,2,3,4])
