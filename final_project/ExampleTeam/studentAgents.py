@@ -4,6 +4,7 @@ from game import Directions
 from observedState import ObservedState
 import numpy as np
 import random
+from sklearn.externals import joblib
 
 class BaseStudentAgent(object):
     """Superclass of agents students will write"""
@@ -43,9 +44,10 @@ class QLearnAgent(BaseStudentAgent):
         self.last_score = None
         self.bad_ghost = None
         # self.epoch = 1
-        self.Q = np.zeros((5,7,4,4,7,4,7,4,2,2))
+        self.Q = np.zeros((5,7,4,7,4,7,4,2,2))
         # number of times action a has been taken from state s
-        self.k = np.zeros((5,7,4,4,7,4,7,4,2,2))
+        self.k = np.zeros((5,7,4,7,4,7,4,2,2))
+        self.ghost_predictor = joblib.load('ghost_predictor.pkl')
     
     def registerInitialState(self, gameState):
         """
@@ -119,11 +121,37 @@ class QLearnAgent(BaseStudentAgent):
                     return 3 # West
 
         def getGoodGhost(ghost_states):
-            # process features to return distance, direction, class of best ghost
-            # FEATURES:
-            # Whether ghost is from quadrant 4
-            # Given good ghost, need features 1-8
-            return good_dist, good_dir, good_class
+            gs_class_list = []
+            gs_distance_list = []
+            gs_direction_list = []
+            for gs in ghost_states:
+                # only need the first 8 features
+                features = np.array(gs.getFeatures())[:8]
+                if features[0] == self.bad_ghost:
+                    # skip the bad ghost
+                    continue
+                if gs.getPosition() == pacmanPosition:
+                    # if we are already eating the ghost, skip it
+                    continue
+                else:
+                    # class of the good ghost
+                    gs_class_list.append(self.ghost_predictor(features))
+                    gs_distance_list.append(self.distancer.getDistance(pacmanPosition,gs.getPosition()))
+                    gs_direction_list.append(getDirection(pacmanPosition,gs.getPosition()))
+
+            # ranking of classes based on mean score, -1, 0, 1, 2
+            gs_class_list = [-1 if gs_class == 3 else gs_class for gs_class in gs_class_list]
+
+            # best ghost is the one with highest class ranking. In case of a tie in class ranking, take the ghost that's closer to the pacman
+            best_gs_i = 0
+            for i in xrange(1, len(gs_class_list)):
+                if gs_class_list[i] > gs_class_list[best_gs_i]:
+                    best_gs_i = i
+                elif gs_class_list[i] == gs_class_list[best_gs_i]:
+                    if gs_distance_list[i] < gs_distance_list[best_gs_i]:
+                        best_gs_i = i
+
+            return gs_distance_list[best_gs_i], gs_distance_list[best_gs_i]
 
         def getBadGhost(ghost_states):
             gs = ghost_states[ghost_features.index(self.bad_ghost)]
@@ -136,11 +164,11 @@ class QLearnAgent(BaseStudentAgent):
             # process capsule locations and features to return distance, direction, type of best capsule
             return cap_dist, cap_dir, cap_type
 
-        B,C,D = getGoodGhost(ghost_states)
+        B,C = getGoodGhost(ghost_states)
         E,F = getBadGhost(ghost_states)
         G,H,I = getBestCapsule(capsule_data)
 
-        curr_state = B,C,D,E,F,G,H,I,J
+        curr_state = B,C,E,F,G,H,I,J
 
         def default_action():
             return random.choice([0,1,2,3,4])

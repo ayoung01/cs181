@@ -19,16 +19,19 @@ y_class = raw[:, 5]
 exclude_bad_ghosts = y_class != 5
 y_class = y_class[exclude_bad_ghosts]
 y_score = raw[:, 6]
+y_score = y_score[exclude_bad_ghosts]
+
 X = raw[:, 7:15]
 #X = np.concatenate( (raw[:, 4:5], raw[:, 7:15]) , axis=1)
 X = X[exclude_bad_ghosts,:]
+
 
 X_train = X
 y_train = y_class
 
 # n_estimators=300, max_features=20 oob_score = 0.901814646792
 from sklearn.ensemble import ExtraTreesClassifier
-erf = ExtraTreesClassifier(n_estimators=300, max_features='auto',
+erf = ExtraTreesClassifier(n_estimators=40, max_features='auto',
                            bootstrap=True, oob_score=True,
                            criterion='gini',
                            max_depth=None, min_samples_split=2,
@@ -45,13 +48,27 @@ feature_importance = erf.feature_importances_
 feature_importance = 100.0 * (feature_importance / feature_importance.max())
 print feature_importance
 
+
+"""
+from sklearn.metrics import mean_absolute_error
+X_train = X[y_class == 3]
+y_train = y_score[y_class == 3]
+from sklearn import linear_model
+clf0 = linear_model.LinearRegression()
+clf0.fit(X_train, y_train)
+pred = clf0.predict(X_train)
+print mean_absolute_error(pred, y_train)
+"""
+
+
+
 #import pickle
 #pickle.dump(erf, open('ghost_predictor.p', 'w'))
 
 
-from sklearn.externals import joblib
-ghost_predictor = erf
-joblib.dump(ghost_predictor, 'ghost_predictor.pkl', compress=9)
+#from sklearn.externals import joblib
+score_predictor = erf
+#joblib.dump(ghost_predictor, 'ghost_predictor.pkl', compress=9)
 #ghost_predictor = joblib.load('ghost_predictor.pkl')
 """
 #n_estimators=200, max_features=10 oob_score = 0.901490602722 valid: 0.891585760518
