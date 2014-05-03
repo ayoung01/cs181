@@ -10,10 +10,17 @@ from sklearn.externals import joblib
 
 import sys
 
+# TO RUN FOR 1 million iterations:
+# set VERBOSE = False, DUMP = True
+# python pacman.py -m 1000001 -q -T ExampleTeam
+
+# TO DEBUG VISUALLY:
+# set VERBOSE = True, DUMP = False
+# python pacman.py -T ExampleTeam
 
 VERBOSE = True
-DUMP = False
-NUM_STEPS = 1000000
+DUMP = False # Whether we write Q matrix to file
+NUM_STEPS = 1000000 # number of steps before we dump our Q matrix
 
 if not VERBOSE:
     sys.stdout = open('stdout.txt', 'wb')
