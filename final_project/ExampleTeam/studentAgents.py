@@ -43,7 +43,7 @@ class ExampleTeamAgent(BaseStudentAgent):
         self.last_action = None
         self.last_score = 0
         self.bad_ghost = None
-        self.epoch = 1
+        self.step = 1
         self.Q = np.zeros((7,4,7,4,2,5))
         self.k = np.zeros((7,4,7,4,2,5)) # num times action a has been taken from state s
         self.ALPHA_POW = 1
@@ -66,22 +66,22 @@ class ExampleTeamAgent(BaseStudentAgent):
 
     def chooseAction(self, observedState):
         '''
-        B: good_dist: smallest number of steps to tracked ghost <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
-        C: good_dir: direction to reach tracked ghost <'0:N','1:E','2:S','3:W'>
-        D: good_class: predicted class of tracked ghost <0,1,2,3>
+        good_dist: smallest number of steps to tracked ghost <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
+        good_dir: direction to reach tracked ghost <'0:N','1:E','2:S','3:W'>
+        good_class: predicted class of tracked ghost <0,1,2,3>
 
-        E: bad_dist: smallest number of steps to bad ghost <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
-        F: bad_dir: direction to reach bad ghost <'0:N','1:E','2:S','3:W'>
+        bad_dist: smallest number of steps to bad ghost <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
+        bad_dir: direction to reach bad ghost <'0:N','1:E','2:S','3:W'>
 
-        G: cap_dist: smallest number of steps to best capsule in world <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
-        H: cap_dir: direction to reach best capsule in world <'0:N','1:E','2:S','3:W'>
-        I: cap_type: predicted capsule type <0,1>
+        cap_dist: smallest number of steps to best capsule in world <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
+        cap_dir: direction to reach best capsule in world <'0:N','1:E','2:S','3:W'>
+        cap_type: predicted capsule type <0,1>
 
-        J: scared_ghost_present: <0,1>
-        A: action space: <'0:N','1:E','2:S','3:W','4:STOP'>
+        scared_ghost_present: <0,1>
+        action space: <'0:N','1:E','2:S','3:W','4:STOP'>
 
         '''
-        print 'Step number: ', self.epoch
+        print 'Step number: ', self.step
 
         # process current state variables
         pacmanPosition = observedState.getPacmanPosition()
@@ -110,7 +110,7 @@ class ExampleTeamAgent(BaseStudentAgent):
         
         capsule_data = observedState.getCapsuleData()
         curr_score = observedState.getScore()
-        J = int(observedState.scaredGhostPresent())
+        scared_ghost_present = int(observedState.scaredGhostPresent())
 
         def discretizeDistance(d):
             if d==0:
@@ -183,15 +183,16 @@ class ExampleTeamAgent(BaseStudentAgent):
             # print 'Direction to bad ghost: ', bad_dir
             return bad_dist, bad_dir
 
-        # def getBestCapsule(capsule_data):
-        #     # process capsule locations and features to return distance, direction, type of best capsule
-        #     return cap_dist, cap_dir, cap_type
+        def getBestCapsule(capsule_data):
+            # for now just get closest capsule
+            # process capsule locations and features to return distance, direction, type of best capsule
+            return cap_dist, cap_dir
 
-        B,C = getGoodGhost(ghost_states)
-        E,F = getBadGhost(ghost_states)
-        # G,H,I = getBestCapsule(capsule_data)
+        good_dist,good_dir = getGoodGhost(ghost_states)
+        bad_dist,bad_dir = getBadGhost(ghost_states)
+        # cap_dist,cap_dir,cap_type = getBestCapsule(capsule_data)
 
-        curr_state = B,C,E,F,J#,G,H,I,J
+        curr_state = good_dist,good_dir,ad_dist,bad_dir,scared_ghost_present#,cap_dist,cap_dir,cap_type
         print "current state: ",curr_state
 
         # returns a random legal action
@@ -204,11 +205,9 @@ class ExampleTeamAgent(BaseStudentAgent):
         last_reward = curr_score - self.last_score
         
         new_action = default_action()
-        if not self.last_action == None: # if we're not at the very beginning of the epoch
+        if not self.last_action == None: # if we're not at the very beginning of the step
             # print self.Q.shape
             max_Q = np.max(self.Q[curr_state])
-
-            b,c,e,f,j = self.last_state
 
             # if we've seen this state before, take greedy action:
             if not sum(self.Q[curr_state])==0:
@@ -227,7 +226,7 @@ class ExampleTeamAgent(BaseStudentAgent):
         self.last_state  = curr_state
         self.last_score = curr_score
         print str(round(float(np.count_nonzero(self.Q))*100/self.Q.size,3)) + "%"
-        self.epoch+=1
+        self.step+=1
         print 'new action: ', directions[new_action]
         if not directions[new_action] in legalActs:
             print 'Illegal action!'
