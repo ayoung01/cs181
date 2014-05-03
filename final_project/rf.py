@@ -7,9 +7,11 @@ Ghost classification
 @author: vincentli2010
 """
 
+"""
+#
+# Ghost Class Data
+#
 
-# Load data
-import numpy as np
 #raw = np.genfromtxt('/home/vincentli2010/Desktop/ghost_train.csv', delimiter=',')[:10000]
 #np.save(open('ghost_train.npy', 'wb'), raw)
 raw = np.load(open('ghost_train.npy', 'rb'))
@@ -24,14 +26,21 @@ y_score = y_score[exclude_bad_ghosts]
 X = raw[:, 7:15]
 #X = np.concatenate( (raw[:, 4:5], raw[:, 7:15]) , axis=1)
 X = X[exclude_bad_ghosts,:]
+"""
+import numpy as np
+import pickle
+raw = pickle.load(open('capsule_data', 'r'))[:500]
+data = np.empty((len(raw), 4))
+for i, sample in enumerate(raw):
+  data[i, :3] = sample[0]
+  data[i, 3] = sample[1]
 
-
-X_train = X
-y_train = y_class
+X_train = data[:, :3]
+y_train = data[:, 3]
 
 # n_estimators=300, max_features=20 oob_score = 0.901814646792
 from sklearn.ensemble import ExtraTreesClassifier
-erf = ExtraTreesClassifier(n_estimators=40, max_features='auto',
+erf = ExtraTreesClassifier(n_estimators=20, max_features='auto',
                            bootstrap=True, oob_score=True,
                            criterion='gini',
                            max_depth=None, min_samples_split=2,
@@ -67,7 +76,7 @@ print mean_absolute_error(pred, y_train)
 
 
 #from sklearn.externals import joblib
-score_predictor = erf
+#ghost_predictor = erf
 #joblib.dump(ghost_predictor, 'ghost_predictor.pkl', compress=9)
 #ghost_predictor = joblib.load('ghost_predictor.pkl')
 """
