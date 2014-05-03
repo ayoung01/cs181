@@ -4,6 +4,7 @@ from game import Directions
 from observedState import ObservedState
 import numpy as np
 import random
+import pickle
 from sklearn.externals import joblib
 
 class BaseStudentAgent(object):
@@ -234,6 +235,10 @@ class ExampleTeamAgent(BaseStudentAgent):
         if not directions[new_action] in legalActs:
             print 'Illegal action!'
             new_action = default_action()
+        if self.step == 10000:
+            f = open("Q_10000","wb")
+            pickle.dump(self.Q,f)
+            f.close()
         return directions[new_action]
 
 
