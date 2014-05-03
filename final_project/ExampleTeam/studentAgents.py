@@ -5,7 +5,19 @@ from observedState import ObservedState
 import numpy as np
 import random
 import pickle
+import heapq
 from sklearn.externals import joblib
+
+import sys
+
+
+VERBOSE = True
+DUMP = False
+NUM_STEPS = 1000000
+
+if not VERBOSE:
+    sys.stdout = open('stdout.txt', 'wb')
+sys.stderr = open('stderr.txt', 'wb')
 
 class BaseStudentAgent(object):
     """Superclass of agents students will write"""
@@ -44,14 +56,17 @@ class ExampleTeamAgent(BaseStudentAgent):
         self.last_action = None
         self.last_score = 0
         self.bad_ghost = None
+        self.last_ghost_features = None
         self.step = 1
         # self.Q = np.zeros((7,4,7,4,2,5))
         # self.k = np.zeros((7,4,7,4,2,5)) # num times action a has been taken from state s
         self.ALPHA_POW = 0
-        self.GAMMA = 0.9
-        self.Q = np.zeros((7,4,7,4,7,4,2,5))
-        self.k = np.zeros((7,4,7,4,7,4,2,5)) # num times action a has been taken from state s
+        self.GAMMA = 0.1
+        self.Q = np.zeros((7,4,7,4,7,4,2,4))
+        # self.Q = pickle.load(open("Q","rb"))
+        self.k = np.zeros((7,4,7,4,7,4,2,4)) # num times action a has been taken from state s
         self.ghost_predictor = joblib.load('ghost_predictor_lda.pkl')
+        self.cap_predictor = joblib.load('capsule_predictor_lda.pkl')
     
     def registerInitialState(self, gameState):
         """
@@ -77,7 +92,7 @@ class ExampleTeamAgent(BaseStudentAgent):
         cap_dir: direction to reach best capsule in world <'0:N','1:E','2:S','3:W'>
 
         scared_ghost_present: <0,1>
-        action space: <'0:N','1:E','2:S','3:W','4:STOP'>
+        action space: <'0:N','1:E','2:S','3:W'> (we don't think stopping should ever be the optimal action)
 
         '''
         print 'Step number: ', self.step
@@ -85,12 +100,12 @@ class ExampleTeamAgent(BaseStudentAgent):
         # process current state variables
         pacmanPosition = observedState.getPacmanPosition()
         ghost_states = observedState.getGhostStates() # states have getPosition() and getFeatures() methods
-        legalActs = [a for a in observedState.getLegalPacmanActions()]
+        legalActs = observedState.getLegalPacmanActions()
         ghost_dists = np.array([self.distancer.getDistance(pacmanPosition,gs.getPosition()) 
                               for gs in ghost_states])
         ghost_quadrants = [observedState.getGhostQuadrant(gs) for gs in ghost_states]
         ghost_features = [gs.getFeatures()[0] for gs in ghost_states]
-        directions = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST,Directions.STOP]
+        directions = [Directions.NORTH, Directions.EAST, Directions.SOUTH, Directions.WEST]
 
 
         # if we are just starting the game
@@ -99,20 +114,22 @@ class ExampleTeamAgent(BaseStudentAgent):
             self.bad_ghost = ghost_states[ghost_quadrants.index(4)].getFeatures()[0]
 
         # check for the spawn of a new bad ghost
-        if not self.bad_ghost in ghost_features:
+        elif not self.bad_ghost in ghost_features:
+            print 'ghost must have respawned!'
             for gs in ghost_states:
-                if not gs.getFeatures[0] in ghost_features:
-                    self.bad_ghost = gs.getFeatures()[0]
+                if not gs.getFeatures()[0] in self.last_ghost_features:
+                    try:
+                        if gs.getFeatures()[0] == ghost_states[ghost_quadrants.index(4)].getFeatures()[0]:
+                            self.bad_ghost = gs.getFeatures()[0]
+                    except:
+                        print 'uh oh... no ghosts in quadrant 4 but the ghost disappeared'
 
-                    if ghost_states[ghost_quadrants.index(4)].getFeatures()[0] != self.bad_ghost:
-                        raise Exception("Bad ghost identified not in quadrant 4")
-        
         curr_score = observedState.getScore()
         scared_ghost_present = int(observedState.scaredGhostPresent())
         capsule_states = observedState.getCapsuleData()
-        capsule_dists = np.array([self.distancer.getDistance(pacmanPosition,gs[0]) 
-                              for gs in capsule_states])
-        closest_capsule = capsule_states[capsule_dists.argmin()][0]
+        capsule_dists = np.array([self.distancer.getDistance(pacmanPosition,x[0]) 
+                              for x in capsule_states])
+
 
         def discretizeDistance(d):
             if d==0:
@@ -132,7 +149,9 @@ class ExampleTeamAgent(BaseStudentAgent):
         def getDirection(pacman_pos, ghost_pos):
             x,y = ghost_pos[0]-pacman_pos[0], ghost_pos[1]-pacman_pos[1]
             if x==0 and y==0:
-                raise Exception("Ghost targeted in collision with Pacman")
+                # raise Exception("Object targeted in collision with Pacman")
+                print 'Object colliding with Pacman'
+                return random.choice([0,1,2,3])
             if abs(y) >= abs(x):
                 if y >= 0:
                     return 0 # North
@@ -178,39 +197,110 @@ class ExampleTeamAgent(BaseStudentAgent):
             return gs_distance_list[best_gs_i], gs_direction_list[best_gs_i]
 
         def getBadGhost(ghost_states):
-            gs = ghost_states[ghost_features.index(self.bad_ghost)]
-            bad_dist = getDistance(gs.getPosition())
-            bad_dir = getDirection(pacmanPosition,gs.getPosition())
-            # print 'Bad ghost is at: ', gs.getPosition()
-            # print 'Direction to bad ghost: ', bad_dir
+            
+            try:
+                gs = ghost_states[ghost_features.index(self.bad_ghost)]
+                bad_dist = getDistance(gs.getPosition())
+                # if VERBOSE:
+                    # print "Distance to bad ghost: ", bad_dist
+                bad_dir = getDirection(pacmanPosition,gs.getPosition())
+            except:
+                bad_dist = 0
+                bad_dir = random.choice([0,1,2,3])
+
             return bad_dist, bad_dir
 
+        #cap_class = 1 => good capsule
+        #cap_class = 0 => bad capsule
         def getBestCapsule(capsule_states):
-            # for now just get closest capsule
+            capsule_states = observedState.getCapsuleData()
+            capsule_dists = np.array([self.distancer.getDistance(pacmanPosition,x[0]) 
+                                  for x in capsule_states])
+            
+            good_caps = []
             # process capsule locations and features to return distance, direction, type of best capsule
-            cap_dist = getDistance(closest_capsule)
-            cap_dir = getDirection(pacmanPosition,closest_capsule)
-            return cap_dist, cap_dir
+            for cs in capsule_states:
+                pos = cs[0]
+                features = cs[1]
+                cap_class = self.cap_predictor.predict(features)
+                if (cap_class):
+                    good_caps.append(cs)
+
+            # Get good capsule with best distance
+            best_dist = 1000
+            cap_dir = random.choice([0,1,2,3])
+            for cs in good_caps:
+                print 'good caps', good_caps
+                pos = cs[0]
+                if pos==pacmanPosition:
+                    continue
+                if getDistance(pos) < best_dist:
+                    best_cap = cs
+                    cap_dir = getDirection(pacmanPosition, pos)
+                    best_dist = getDistance(pos)
+
+            # Corner case: no good capsules
+            if len(good_caps) ==0:
+                # handle case
+                pass
+            return best_dist, cap_dir
 
         good_dist,good_dir = getGoodGhost(ghost_states)
         bad_dist,bad_dir = getBadGhost(ghost_states)
         cap_dist,cap_dir = getBestCapsule(capsule_states)
 
         curr_state = good_dist,good_dir,bad_dist,bad_dir,cap_dist,cap_dir,scared_ghost_present
-        print "current state: ",curr_state
+        
+        if VERBOSE:
+            print 'Distance of good ghost:',good_dist,'direction:',directions[good_dir]
+        #     print "current state: ",curr_state
+        
+        def sanity_check(action):
+            # if we are going to get eaten by the bad ghost, gtfo
+            if getBadGhost(ghost_states)[0]<=2 and scared_ghost_present==0:
+                if VERBOSE:
+                    print "GTFO we're near!!!"
+                try:
+                    pos=ghost_states[ghost_features.index(self.bad_ghost)].getPosition()
+                    best_action = random.choice(directions)
+                    best_dist = -np.inf
+
+                    for la in legalActs:
+                        if la == Directions.STOP:
+                            continue
+                        successor_pos = Actions.getSuccessor(pacmanPosition,la)
+                        new_dist = self.distancer.getDistance(successor_pos,pos)
+                        if new_dist >= best_dist:
+                            best_action = directions.index(la)
+                            best_dist = new_dist
+                        if VERBOSE:
+                            print 'sanity check!', directions[action], 'changed to' , directions[best_action]
+
+                    return best_action
+                except:
+                    print 'oops we messed up'
+                    pass
+            return action
 
         # returns a random legal action
         def default_action():
-            action = random.choice([0,1,2,3,4])
+            # action = random.choice([0,1,2,3])
+            action = good_dir
+            if not scared_ghost_present:
+                action = cap_dir
+                print 'cap_dir', directions[cap_dir]
+            else:
+                action = bad_dir
             while not directions[action] in legalActs:
-                action = random.choice([0,1,2,3,4])
-            return action
+                action = random.choice([0,1,2,3])
+            if VERBOSE:
+                print 'default action', directions[action]
+            return sanity_check(action)
 
         last_reward = curr_score - self.last_score
         
         new_action = default_action()
         if not self.last_action == None: # if we're not at the very beginning of the step
-            # print self.Q.shape
             max_Q = np.max(self.Q[curr_state])
 
             # if we've seen this state before, take greedy action:
@@ -219,9 +309,8 @@ class ExampleTeamAgent(BaseStudentAgent):
                 Q_E = self.Q[curr_state][1]
                 Q_S = self.Q[curr_state][2]
                 Q_W = self.Q[curr_state][3]
-                Q_STOP = self.Q[curr_state][4]
-
-                new_action = np.argmax([Q_N,Q_E,Q_S,Q_W,Q_STOP])
+                # print 'new action selected based on best Q-Value!', new_action
+                new_action = np.argmax([Q_N,Q_E,Q_S,Q_W])
 
             self.k[curr_state][new_action] += 1
             ALPHA = 1/pow(self.k[curr_state][new_action], self.ALPHA_POW)
@@ -229,74 +318,17 @@ class ExampleTeamAgent(BaseStudentAgent):
         self.last_action = new_action
         self.last_state  = curr_state
         self.last_score = curr_score
+        self.last_ghost_features = ghost_features
         print str(round(float(np.count_nonzero(self.Q))*100/self.Q.size,3)) + "%"
         self.step+=1
-        print 'new action: ', directions[new_action]
+
         if not directions[new_action] in legalActs:
-            print 'Illegal action!'
             new_action = default_action()
-        if self.step == 10000:
-            f = open("Q_10000","wb")
+        if self.step == NUM_STEPS and DUMP:
+            f = open("Q","wb")
             pickle.dump(self.Q,f)
             f.close()
+        if VERBOSE:
+            print 'New action: ', directions[new_action], 'for step', self.step
         return directions[new_action]
-
-
-# # Below is the class students need to rename and modify
-# class ExampleTeamAgent(BaseStudentAgent):
-#     """
-#     An example TeamAgent. After renaming this agent so it is called <YourTeamName>Agent,
-#     (and also renaming it in registerInitialState() below), modify the behavior
-#     of this class so it does well in the pacman game!
-#     """
-    
-#     def __init__(self, *args, **kwargs):
-#         """
-#         arguments given with the -a command line option will be passed here
-#         """
-#         pass # you probably won't need this, but just in case
-    
-#     def registerInitialState(self, gameState):
-#         """
-#         Do any necessary initialization
-#         """
-#         # Here, you must replace "ExampleTeamAgent" with "<YourTeamName>Agent"
-#         super(ExampleTeamAgent, self).registerInitialState(gameState)
-        
-#         # Here, you may do any necessary initialization, e.g., import some
-#         # parameters you've learned, as in the following commented out lines
-#         # learned_params = cPickle.load("myparams.pkl")
-#         # learned_params = np.load("myparams.npy")        
-    
-#     def chooseAction(self, observedState):
-#         """
-#         Here, choose pacman's next action based on the current state of the game.
-#         This is where all the action happens.
-        
-#         This silly pacman agent will move away from the ghost that it is closest
-#         to. This is not a very good strategy, and completely ignores the features of
-#         the ghosts and the capsules; it is just designed to give you an example.
-#         """
-#         goodCapsules = observedState.getGoodCapsuleExamples()
-#         pacmanPosition = observedState.getPacmanPosition()
-#         ghost_states = observedState.getGhostStates() # states have getPosition() and getFeatures() methods
-#         legalActs = [a for a in observedState.getLegalPacmanActions()]
-#         ghost_dists = np.array([self.distancer.getDistance(pacmanPosition,gs.getPosition()) 
-#                               for gs in ghost_states])
-#         ghost_quadrants = [observedState.getGhostQuadrant(gs) for gs in ghost_states]
-
-#         # find the closest ghost by sorting the distances
-#         closest_idx = sorted(zip(range(len(ghost_states)),ghost_dists), key=lambda t: t[1])[0][0]
-#         # take the action that minimizes distance to the current closest ghost
-#         best_action = Directions.STOP
-#         best_dist = -np.inf
-#         for la in legalActs:
-#             if la == Directions.STOP:
-#                 continue
-#             successor_pos = Actions.getSuccessor(pacmanPosition,la)
-#             new_dist = self.distancer.getDistance(successor_pos,ghost_states[closest_idx].getPosition())
-#             if new_dist > best_dist:
-#                 best_action = la
-#                 best_dist = new_dist
-#         return best_action
 
