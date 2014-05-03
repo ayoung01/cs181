@@ -20,7 +20,10 @@ import sys
 
 VERBOSE = True
 DUMP = False # Whether we write Q matrix to file
+RELEARN = True # Whether we start with an empty Q matrix
 NUM_STEPS = 1000000 # number of steps before we dump our Q matrix
+GAMMA = 0.1
+ALPHA_POW = 0
 
 if not VERBOSE:
     sys.stdout = open('stdout.txt', 'wb')
@@ -65,12 +68,11 @@ class ExampleTeamAgent(BaseStudentAgent):
         self.bad_ghost = None
         self.last_ghost_features = None
         self.step = 1
-        # self.Q = np.zeros((7,4,7,4,2,5))
-        # self.k = np.zeros((7,4,7,4,2,5)) # num times action a has been taken from state s
-        self.ALPHA_POW = 0
-        self.GAMMA = 0.1
-        self.Q = np.zeros((7,4,7,4,7,4,2,4))
-        # self.Q = pickle.load(open("Q","rb"))
+        if RELEARN:
+            self.Q = np.zeros((7,4,7,4,7,4,2,4))
+        else:
+            self.Q = pickle.load(open("Q","rb"))
+        
         self.k = np.zeros((7,4,7,4,7,4,2,4)) # num times action a has been taken from state s
         self.ghost_predictor = joblib.load('ghost_predictor_lda.pkl')
         self.cap_predictor = joblib.load('capsule_predictor_lda.pkl')
@@ -320,8 +322,8 @@ class ExampleTeamAgent(BaseStudentAgent):
                 new_action = np.argmax([Q_N,Q_E,Q_S,Q_W])
 
             self.k[curr_state][new_action] += 1
-            ALPHA = 1/pow(self.k[curr_state][new_action], self.ALPHA_POW)
-            self.Q[self.last_state][self.last_action] += ALPHA*(last_reward+self.GAMMA*max_Q-self.Q[self.last_state][self.last_action])
+            ALPHA = 1/pow(self.k[curr_state][new_action], ALPHA_POW)
+            self.Q[self.last_state][self.last_action] += ALPHA*(last_reward+GAMMA*max_Q-self.Q[self.last_state][self.last_action])
         self.last_action = new_action
         self.last_state  = curr_state
         self.last_score = curr_score
