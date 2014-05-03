@@ -44,12 +44,12 @@ class ExampleTeamAgent(BaseStudentAgent):
         self.last_score = 0
         self.bad_ghost = None
         self.step = 1
-        self.Q = np.zeros((7,4,7,4,2,5))
-        self.k = np.zeros((7,4,7,4,2,5)) # num times action a has been taken from state s
-        self.ALPHA_POW = 1
+        # self.Q = np.zeros((7,4,7,4,2,5))
+        # self.k = np.zeros((7,4,7,4,2,5)) # num times action a has been taken from state s
+        self.ALPHA_POW = 0
         self.GAMMA = 0.9
-        # self.Q = np.zeros((7,4,7,4,7,4,2,2,5))
-        # self.k = np.zeros((7,4,7,4,7,4,2,2,5)) # num times action a has been taken from state s
+        self.Q = np.zeros((7,4,7,4,7,4,2,5))
+        self.k = np.zeros((7,4,7,4,7,4,2,5)) # num times action a has been taken from state s
         self.ghost_predictor = joblib.load('ghost_predictor.pkl')
     
     def registerInitialState(self, gameState):
@@ -68,14 +68,12 @@ class ExampleTeamAgent(BaseStudentAgent):
         '''
         good_dist: smallest number of steps to tracked ghost <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
         good_dir: direction to reach tracked ghost <'0:N','1:E','2:S','3:W'>
-        good_class: predicted class of tracked ghost <0,1,2,3>
 
         bad_dist: smallest number of steps to bad ghost <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
         bad_dir: direction to reach bad ghost <'0:N','1:E','2:S','3:W'>
 
         cap_dist: smallest number of steps to best capsule in world <[0]:1,[1]:2,[2]:3,[3]:4,[4]:5,[5]:6-9,[6]:10+>
         cap_dir: direction to reach best capsule in world <'0:N','1:E','2:S','3:W'>
-        cap_type: predicted capsule type <0,1>
 
         scared_ghost_present: <0,1>
         action space: <'0:N','1:E','2:S','3:W','4:STOP'>
@@ -108,9 +106,12 @@ class ExampleTeamAgent(BaseStudentAgent):
                     if ghost_states[ghost_quadrants.index(4)].getFeatures()[0] != self.bad_ghost:
                         raise Exception("Bad ghost identified not in quadrant 4")
         
-        capsule_data = observedState.getCapsuleData()
         curr_score = observedState.getScore()
         scared_ghost_present = int(observedState.scaredGhostPresent())
+        capsule_states = observedState.getCapsuleData()
+        capsule_dists = np.array([self.distancer.getDistance(pacmanPosition,gs[0]) 
+                              for gs in capsule_states])
+        closest_capsule = capsule_states[capsule_dists.argmin()][0]
 
         def discretizeDistance(d):
             if d==0:
@@ -183,16 +184,18 @@ class ExampleTeamAgent(BaseStudentAgent):
             # print 'Direction to bad ghost: ', bad_dir
             return bad_dist, bad_dir
 
-        def getBestCapsule(capsule_data):
+        def getBestCapsule(capsule_states):
             # for now just get closest capsule
             # process capsule locations and features to return distance, direction, type of best capsule
+            cap_dist = getDistance(closest_capsule)
+            cap_dir = getDirection(pacmanPosition,closest_capsule)
             return cap_dist, cap_dir
 
         good_dist,good_dir = getGoodGhost(ghost_states)
         bad_dist,bad_dir = getBadGhost(ghost_states)
-        # cap_dist,cap_dir,cap_type = getBestCapsule(capsule_data)
+        cap_dist,cap_dir = getBestCapsule(capsule_states)
 
-        curr_state = good_dist,good_dir,ad_dist,bad_dir,scared_ghost_present#,cap_dist,cap_dir,cap_type
+        curr_state = good_dist,good_dir,bad_dist,bad_dir,cap_dist,cap_dir,scared_ghost_present
         print "current state: ",curr_state
 
         # returns a random legal action
