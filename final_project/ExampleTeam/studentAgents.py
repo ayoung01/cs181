@@ -51,7 +51,7 @@ class ExampleTeamAgent(BaseStudentAgent):
         self.GAMMA = 0.9
         self.Q = np.zeros((7,4,7,4,7,4,2,5))
         self.k = np.zeros((7,4,7,4,7,4,2,5)) # num times action a has been taken from state s
-        self.ghost_predictor = joblib.load('ghost_predictor.pkl')
+        self.ghost_predictor = joblib.load('ghost_predictor_lda.pkl')
     
     def registerInitialState(self, gameState):
         """
