@@ -37,3 +37,6 @@ nosetests.xml
 
 /Practical\ 3/train/
 /final_project/data/
+/final_project/Q
+/final_project/stderr.txt
+/final_project/stdout.txt

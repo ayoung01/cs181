@@ -12,7 +12,7 @@ import sys
 
 # TO RUN FOR 1 million iterations:
 # set VERBOSE = False, DUMP = True
-# python pacman.py -m 1000001 -q -T ExampleTeam
+# python pacman.py -m 100001 -q -T ExampleTeam
 
 # TO DEBUG VISUALLY:
 # set VERBOSE = True, DUMP = False
@@ -20,10 +20,13 @@ import sys
 
 VERBOSE = True
 DUMP = False # Whether we write Q matrix to file
-RELEARN = True # Whether we start with an empty Q matrix
-NUM_STEPS = 1000000 # number of steps before we dump our Q matrix
-GAMMA = 0.1
+RELEARN = False # Whether we start with an empty Q matrix
+NUM_STEPS = 100000 # number of steps before we dump our Q matrix
+SANITY_CHECK = False # run away from bad ghost if we are too close
+RANDOM_DEFAULT_ACTION = False
+GAMMA = 0.9
 ALPHA_POW = 0
+USE_LEARNING_RESULTS = True
 
 if not VERBOSE:
     sys.stdout = open('stdout.txt', 'wb')
@@ -104,7 +107,9 @@ class ExampleTeamAgent(BaseStudentAgent):
         action space: <'0:N','1:E','2:S','3:W'> (we don't think stopping should ever be the optimal action)
 
         '''
+        print '============================================='
         print 'Step number: ', self.step
+        print '============================================='
 
         # process current state variables
         pacmanPosition = observedState.getPacmanPosition()
@@ -210,9 +215,10 @@ class ExampleTeamAgent(BaseStudentAgent):
             try:
                 gs = ghost_states[ghost_features.index(self.bad_ghost)]
                 bad_dist = getDistance(gs.getPosition())
-                # if VERBOSE:
-                    # print "Distance to bad ghost: ", bad_dist
                 bad_dir = getDirection(pacmanPosition,gs.getPosition())
+                if VERBOSE:
+                    # print "Bad ghost position: ", gs.getPosition()
+                    print 'BAD GHOST DIRECTION: ', bad_dir, bad_dist
             except:
                 bad_dist = 0
                 bad_dir = random.choice([0,1,2,3])
@@ -239,7 +245,6 @@ class ExampleTeamAgent(BaseStudentAgent):
             best_dist = 1000
             cap_dir = random.choice([0,1,2,3])
             for cs in good_caps:
-                print 'good caps', good_caps
                 pos = cs[0]
                 if pos==pacmanPosition:
                     continue
@@ -297,41 +302,50 @@ class ExampleTeamAgent(BaseStudentAgent):
             action = good_dir
             if not scared_ghost_present:
                 action = cap_dir
-                print 'cap_dir', directions[cap_dir]
             else:
-                action = bad_dir
+                action = good_dir
             while not directions[action] in legalActs:
                 action = random.choice([0,1,2,3])
+            if SANITY_CHECK:
+                return sanity_check(action)
+            if RANDOM_DEFAULT_ACTION:
+                action = random.choice([0,1,2,3])
+                while not directions[action] in legalActs:
+                    action = random.choice([0,1,2,3])
             if VERBOSE:
                 print 'default action', directions[action]
-            return sanity_check(action)
+            return action
 
         last_reward = curr_score - self.last_score
+        print 'last_reward: ',last_reward
         
         new_action = default_action()
-        if not self.last_action == None: # if we're not at the very beginning of the step
-            max_Q = np.max(self.Q[curr_state])
+        if USE_LEARNING_RESULTS:
+            if not self.last_action == None: # if we're not at the very beginning of the step
+                max_Q = np.max(self.Q[curr_state])
 
-            # if we've seen this state before, take greedy action:
-            if not sum(self.Q[curr_state])==0:
-                Q_N = self.Q[curr_state][0]
-                Q_E = self.Q[curr_state][1]
-                Q_S = self.Q[curr_state][2]
-                Q_W = self.Q[curr_state][3]
-                # print 'new action selected based on best Q-Value!', new_action
-                new_action = np.argmax([Q_N,Q_E,Q_S,Q_W])
+                # if we've seen this state before, take greedy action:
+                print 'Q[curr_state]', self.Q[curr_state]
+                if not sum(self.Q[curr_state])==0:
+                    Q_N = self.Q[curr_state][0]
+                    Q_E = self.Q[curr_state][1]
+                    Q_S = self.Q[curr_state][2]
+                    Q_W = self.Q[curr_state][3]
+                    new_action = np.argmax([Q_N,Q_E,Q_S,Q_W])
+                    print 'new action selected based on best Q-Value!', new_action
 
-            self.k[curr_state][new_action] += 1
-            ALPHA = 1/pow(self.k[curr_state][new_action], ALPHA_POW)
-            self.Q[self.last_state][self.last_action] += ALPHA*(last_reward+GAMMA*max_Q-self.Q[self.last_state][self.last_action])
+                self.k[curr_state][new_action] += 1
+                ALPHA = 1/pow(self.k[curr_state][new_action], ALPHA_POW)
+                self.Q[self.last_state][self.last_action] += ALPHA*(last_reward+GAMMA*max_Q-self.Q[self.last_state][self.last_action])
         self.last_action = new_action
         self.last_state  = curr_state
         self.last_score = curr_score
         self.last_ghost_features = ghost_features
         print str(round(float(np.count_nonzero(self.Q))*100/self.Q.size,3)) + "%"
-        self.step+=1
 
         if not directions[new_action] in legalActs:
+            if VERBOSE:
+                print 'illegal action'
             new_action = default_action()
         if self.step == NUM_STEPS and DUMP:
             f = open("Q","wb")
@@ -339,5 +353,6 @@ class ExampleTeamAgent(BaseStudentAgent):
             f.close()
         if VERBOSE:
             print 'New action: ', directions[new_action], 'for step', self.step
+        self.step+=1
         return directions[new_action]
 
