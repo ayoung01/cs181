@@ -415,15 +415,11 @@ class TeamVAJAgent(BaseStudentAgent):
             action = good_dir
             if not scared_ghost_present:
                 action = cap_dir
-            elif good_dist ==0:
-                    # if good ghost is 1 or fewer steps away, go after good ghost
-                    print 'We are going after the good ghost!'
-                    action = good_dir
-            else:
-                if observedState.getGhostQuadrant(ghost_states[ghost_features.index(self.bad_ghost)])==4:
-                    # else go after bad ghost
-                    print 'We are going after the bad ghost!'
-                    action = bad_dir
+            elif good_dist >0 and observedState.getGhostQuadrant(ghost_states[ghost_features.index(self.bad_ghost)])!=4:
+                print 'We are going after the bad ghost!'
+                action = bad_dir
+            # else go after good ghost
+
 
             while not directions[action] in legalActs:
                 try:
