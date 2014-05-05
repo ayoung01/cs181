@@ -155,13 +155,15 @@ class TeamVAJAgent(BaseStudentAgent):
         # check for the spawn of a new bad ghost
         elif not self.bad_ghost in ghost_features:
             # print 'current bad ghost: ', self.bad_ghost
-            # print '!!!! ghost must have respawned !!!!!'
+            print '!!!! we don not know who the bad ghost is !!!!!'
             # print 'current ghost features: ', ghost_features
             # print 'self.last_ghost_features', self.last_ghost_features
-            for feat in ghost_features:
+            for gs in ghost_states:
+                feat = gs.getFeatures()[0]
                 if not feat in self.last_ghost_features:
-                    # print feat, 'is newly identified!'
-                    self.bad_ghost = feat
+                    if observedState.getGhostQuadrant(gs)==4:
+                        print feat, 'is newly identified!'
+                        self.bad_ghost = feat
 
         curr_score = observedState.getScore()
         scared_ghost_present = int(observedState.scaredGhostPresent())
@@ -413,12 +415,12 @@ class TeamVAJAgent(BaseStudentAgent):
             action = good_dir
             if not scared_ghost_present:
                 action = cap_dir
-            else:
-                if good_dist ==0:
+            elif good_dist ==0:
                     # if good ghost is 1 or fewer steps away, go after good ghost
                     print 'We are going after the good ghost!'
                     action = good_dir
-                else:
+            else:
+                if observedState.getGhostQuadrant(ghost_states[ghost_features.index(self.bad_ghost)])==4:
                     # else go after bad ghost
                     print 'We are going after the bad ghost!'
                     action = bad_dir
