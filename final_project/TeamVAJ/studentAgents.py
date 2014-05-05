@@ -22,16 +22,16 @@ import sys
 # set VERBOSE = True, DUMP = False
 # python pacman.py -T TeamVAJ
 
-VERBOSE = True
-DUMP = False # Whether we write Q matrix to file
+VERBOSE = False
+DUMP = True # Whether we write Q matrix to file
 RELEARN = True # If true we start with an empty Q matrix
 
 SANITY_CHECK = False # run away from bad ghost if we are too close
-RANDOM_DEFAULT_ACTION = False
+RANDOM_DEFAULT_ACTION = True
 
-USE_LEARNING_RESULTS = False # If false we always take default action
+USE_LEARNING_RESULTS = True # If false we always take default action
 
-SAVE_FILE = 'Q0'
+SAVE_FILE = 'Q'
 GAMMA = 1
 ALPHA_POW = 1
 
@@ -78,7 +78,11 @@ class TeamVAJAgent(BaseStudentAgent):
         self.bad_ghost = None
         self.good_ghost = None
         self.last_ghost_features = None
+        self.last_scared_ghost_present = False
         self.step = 1
+        self.steps_to_ghost = 0
+        self.steps_to_ghost_list = [0] # initial param to regularize average
+
         if RELEARN:
             self.Q = np.zeros((3,4,3,4,3,4,2,4))
             self.k = np.zeros((3,4,3,4,3,4,2,4)) # num times action a has been taken from state s
@@ -150,12 +154,11 @@ class TeamVAJAgent(BaseStudentAgent):
         if self.last_action==None:
             # we identify the bad ghost by its first feature
             self.bad_ghost = ghost_states[ghost_quadrants.index(4)].getFeatures()[0]
-            # print 'Just found our first ghost!', self.bad_ghost
 
         # check for the spawn of a new bad ghost
         elif not self.bad_ghost in ghost_features:
             # print 'current bad ghost: ', self.bad_ghost
-            print '!!!! we don not know who the bad ghost is !!!!!'
+            print '!!!! bad ghost must have respawned !!!!!'
             # print 'current ghost features: ', ghost_features
             # print 'self.last_ghost_features', self.last_ghost_features
             for gs in ghost_states:
@@ -167,22 +170,26 @@ class TeamVAJAgent(BaseStudentAgent):
 
         curr_score = observedState.getScore()
         scared_ghost_present = int(observedState.scaredGhostPresent())
+        
+        # If our ghost turns from non-scared to scared, start count
+        if scared_ghost_present > self.last_scared_ghost_present:
+            self.steps_to_ghost = 0
+
         capsule_states = observedState.getCapsuleData()
         capsule_dists = np.array([self.distancer.getDistance(pacmanPosition,x[0]) 
                               for x in capsule_states])
         # if our score increased and the good ghost no longer exists, we must have eaten the good ghost!
         if curr_score - self.last_score > 0 and not self.good_ghost in ghost_features:
-            if VERBOSE:
-                print 'We ate the good ghost woohoo!'
             last_reward = 100
         elif curr_score - self.last_score < -1000:
             last_reward = -1000
         elif curr_score - self.last_score >1000:
+            self.steps_to_ghost_list.append(self.steps_to_ghost)
             last_reward = 1200
         else:
             last_reward = -0.5
-        print 'last_reward: ',last_reward
-
+        if VERBOSE:
+            print 'last_reward: ',last_reward
 
         def discretizeDistance(d):
             if d == 0:
@@ -193,11 +200,8 @@ class TeamVAJAgent(BaseStudentAgent):
             if d <= 5:
                 return 1
             return 2
-
-        # return discretized distance from the Pacman to object in position pos
         def getDistance(pos):
             return discretizeDistance(self.distancer.getDistance(pacmanPosition,pos))
-
         # returns 0, 1, 2, or 3 corresponding to North, East, South, West
         def getDirection(pacman_pos, ghost_pos):
             x,y = ghost_pos[0]-pacman_pos[0], ghost_pos[1]-pacman_pos[1]
@@ -215,7 +219,6 @@ class TeamVAJAgent(BaseStudentAgent):
                     return 1 # East
                 else:
                     return 3 # West
-
 
         def getGoodGhostPos(ghost_states):
             gs_class_list = []
@@ -251,7 +254,6 @@ class TeamVAJAgent(BaseStudentAgent):
                         best_gs_i = i
             best_gs = gs_list[best_gs_i]
             return best_gs.getPosition()
-
         def getGoodGhost(ghost_states):
             gs_class_list = []
             gs_distance_list = []
@@ -304,8 +306,7 @@ class TeamVAJAgent(BaseStudentAgent):
 
             return bad_dist, bad_dir
 
-        #cap_class = 1 => good capsule
-        #cap_class = 0 => bad capsule
+        #cap_class = 1 => good capsule, cap_class = 0 => bad capsule
         def getBestCapsulePos(capsule_states):
             capsule_states = observedState.getCapsuleData()
             capsule_dists = np.array([self.distancer.getDistance(pacmanPosition,x[0]) 
@@ -338,7 +339,6 @@ class TeamVAJAgent(BaseStudentAgent):
                 # handle case
                 pass
             return best_pos
-
         def getBestCapsule(capsule_states):
             capsule_states = observedState.getCapsuleData()
             capsule_dists = np.array([self.distancer.getDistance(pacmanPosition,x[0]) 
@@ -409,18 +409,25 @@ class TeamVAJAgent(BaseStudentAgent):
                     pass
             return action
 
+        def ensure_legal(action):
+            if not directions[action] in legalActs:
+                if VERBOSE:
+                    print 'illegal action'
+                action = default_action()
+            return action
         # returns a random legal action
         def default_action():
             # action = random.choice([0,1,2,3])
             action = good_dir
             if not scared_ghost_present:
                 action = cap_dir
-            elif good_dist >0 and observedState.getGhostQuadrant(ghost_states[ghost_features.index(self.bad_ghost)])!=4:
+            # if the good ghost is far and the map is suitable for eating the bad ghost:
+            elif good_dist >0 and np.mean(self.steps_to_ghost_list) > 20:
                 print 'We are going after the bad ghost!'
                 action = bad_dir
             # else go after good ghost
 
-
+            # We run into a wall:
             while not directions[action] in legalActs:
                 try:
                     # if we're going after a capsule, take an action that minimizes the distance to the capsule
@@ -437,17 +444,13 @@ class TeamVAJAgent(BaseStudentAgent):
                             new_dist = self.distancer.getDistance(successor_pos,getGoodGhostPos(ghost_states))
                         # if we're going after the bad ghost, take an action that minimizes distance to bad ghost
                         else:
-                            print 'Going after bad ghost but we are stuck at a wall!'
                             successor_pos = Actions.getSuccessor(pacmanPosition,la)
                             new_dist = self.distancer.getDistance(successor_pos,getBadGhostPos(ghost_states))
                             # print la, new_dist
                         if new_dist < best_dist:
                             best_dist = new_dist
                             action = directions.index(la)
-                            print 'new best distance', la, action
-                    print 'Successfully circumvented the wall!', action
                 except:
-                    print 'Random action because we are a wall!'
                     action = random.choice([0,1,2,3])
             if SANITY_CHECK:
                 return sanity_check(action)
@@ -459,7 +462,7 @@ class TeamVAJAgent(BaseStudentAgent):
                 print 'default action', directions[action]
             return action
         
-        new_action = default_action()
+        new_action = ensure_legal(default_action())
         if USE_LEARNING_RESULTS:
             if not self.last_action == None: # if we're not at the very beginning of the step
                 max_Q = np.max(self.Q[curr_state])
@@ -480,16 +483,13 @@ class TeamVAJAgent(BaseStudentAgent):
         self.last_action = new_action
         self.last_state  = curr_state
         self.last_score = curr_score
-        print ghost_features
         self.last_ghost_features = ghost_features
         print str(round(float(np.count_nonzero(self.Q))*100/self.Q.size,3)) + "%"
 
-        if not directions[new_action] in legalActs:
-            if VERBOSE:
-                print 'illegal action'
-            new_action = default_action()
         if VERBOSE:
             print 'New action: ', directions[new_action], 'for step', self.step
         self.step+=1
+        self.steps_to_ghost+=1
+        self.last_scared_ghost_present = scared_ghost_present
         return directions[new_action]
 
